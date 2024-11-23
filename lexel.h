@@ -48,6 +48,14 @@ enum lxl__token_mvs {
 
 // These functions are for communicating with the lexer, e.g. when parsing.
 
+// Create a new `lxl_lexer` object from start and end pointers.
+// `start` and `end` must be valid, non-NULL pointers, moreover, `end` must point one past the end
+//  of the the string beginning at `start`.
+struct lxl_lexer lxl_lexer_new(const char *start, const char *end);
+
+// Create a new `lxl_lexer` object from a string view.
+struct lxl_lexer lxl_lexer_from_sv(struct string_view sv);
+
 // Get the next token from the lexer. A token of type LXL_TOKENS_END is returned when
 // the token stream is exhausted.
 struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer);
