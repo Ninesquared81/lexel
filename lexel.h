@@ -21,6 +21,17 @@ struct lxl_token {
 
 // END LEXEL CORE.
 
+// LEXEL ADDITIONAL.
+
+// Additional definitions beyond the core above.
+
+struct lxl_string_view {
+    const char *start;
+    size_t length;
+};
+
+// END LEXEL ADDITIONAL.
+
 
 // LEXEL MAGIC VALUES (MVs).
 
@@ -87,11 +98,40 @@ int lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
 // END LEXER INTERNAL INTERFACE.
 
 
+// LEXEL STRING VIEW.
+
+// Functions and macros for working with string views.
+
+// Create a `string_view` object from a null-terminated string.
+struct lxl_string_view lxl_sv_from_string(const char *s);
+// Create a `string_view` object from a C string literal token.
+#define LXL_SV_FROM_STRLIT(lit) (struct lxl_string_view) {.start = lit, .length = sizeof(lit) - 1}
+// Create a `string_view` object from `start` and `end` pointers.
+struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end);
+
+// Get a pointer to (one past) the end of a string view.
+#define LXL_SV_END(sv) (sv).start + (sv).length
+
+// END LEXEL STRING VIEW.
+
+
 // Implementation.
 
 #ifdef LEXEL_IMPLEMENTATION
 
 #include <stdbool.h>
+
+struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
+    return (struct lxl_lexer) {
+        .start = start,
+        .end = end,
+        .current = start,
+    };
+}
+
+struct lxl_lexer lxl_lexer_from_sv(struct string_view sv) {
+    return lxl_lexer_new(sv.start, SV_END(sv));
+}
 
 size_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
     return lexer->current - lexer->start;
@@ -161,7 +201,15 @@ int lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n) 
     return false;
 }
 
+struct lxl_string_view lxl_sv_from_string(const char *s) {
+    return (struct lxl_string_view) {.start = s, .length = strlen(s)};
+}
+
+struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) {
+    return (struct lxl_string_view) {.start = start, .length = end - start};
+}
+
 #undef LEXEL_IMPLEMENTATION
-#endif // LEXEL_IMPLEMENTATION
+#endif  // LEXEL_IMPLEMENTATION
 
 #endif  // LEXEL_H
