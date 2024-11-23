@@ -54,7 +54,7 @@ enum lxl__token_mvs {
 struct lxl_lexer lxl_lexer_new(const char *start, const char *end);
 
 // Create a new `lxl_lexer` object from a string view.
-struct lxl_lexer lxl_lexer_from_sv(struct string_view sv);
+struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv);
 
 // Get the next token from the lexer. A token of type LXL_TOKENS_END is returned when
 // the token stream is exhausted.
@@ -128,6 +128,7 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 #ifdef LEXEL_IMPLEMENTATION
 
 #include <stdbool.h>
+#include <string.h>
 
 struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
     return (struct lxl_lexer) {
@@ -137,8 +138,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
     };
 }
 
-struct lxl_lexer lxl_lexer_from_sv(struct string_view sv) {
-    return lxl_lexer_new(sv.start, SV_END(sv));
+struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
+    return lxl_lexer_new(sv.start, LXL_SV_END(sv));
 }
 
 size_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
@@ -203,7 +204,7 @@ int lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s) {
 }
 
 int lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
-    if (lxl_lexer__check_string_n(lexer, s)) {
+    if (lxl_lexer__check_string_n(lexer, s, n)) {
         return !!lxl_lexer__advance_by(lexer, n);
     }
     return false;
