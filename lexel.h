@@ -1,7 +1,8 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <stddef.h>  // size_t
+#include <stddef.h>   // size_t
+#include <stdbool.h>  // bool, false, true -- requires C99
 
 // LEXEL CORE.
 
@@ -151,7 +152,6 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 #ifdef LEXEL_IMPLEMENTATION
 
 #include <ctype.h>
-#include <stdbool.h>
 #include <string.h>
 
 // LEXER FUNCTIONS.
