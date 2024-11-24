@@ -12,10 +12,10 @@ struct lxl_location {
 };
 
 struct lxl_lexer {
-    const char *start;             // The start of the lexer's source code.
-    const char *end;               // The end of the lexer's source code.
-    const char *current;           // Pointer to the current character.
-    struct lxl_location position;  // The current position (line, col) in the source.
+    const char *start;        // The start of the lexer's source code.
+    const char *end;          // The end of the lexer's source code.
+    const char *current;      // Pointer to the current character.
+    struct lxl_location pos;  // The current position (line, col) in the source.
 };
 
 struct lxl_token {
