@@ -62,6 +62,16 @@ enum lxl__token_mvs {
 // END LEXEL MAGIC VALUES.
 
 
+// TOKEN INTERFACE.
+
+// These functions are for working with tokens.
+
+// Return whether `tok` is a special TOKENS_END token.
+#define LXL_TOKEN_IS_END(tok) (tok).token_type = LXL_TOKENS_END
+
+// END TOKEN INTERFACE.
+
+
 // LEXER EXTERNAL INTERFACE.
 
 // These functions are for communicating with the lexer, e.g. when parsing.
