@@ -9,5 +9,11 @@ int main(void) {
     for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) {
         printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer));
     }
+    printf("Restting lexer...\n");
+    lxl_lexer_reset(&lexer);
+    for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) {
+        i += lxl_lexer__skip_whitespace(&lexer);
+        printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer));
+    }
     return 0;
 }
