@@ -64,6 +64,9 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer);
 // (i.e. there are no more tokens in the source code).
 int lxl_lexer_is_finished(struct lxl_lexer *lexer);
 
+// Reset the lexer to the start of its input.
+void lxl_lexer_reset(struct lxl_lexer *lexer);
+
 // END LEXER EXTERNAL INTERFACE.
 
 
@@ -146,6 +149,10 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
 
 struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
     return lxl_lexer_new(sv.start, LXL_SV_END(sv));
+}
+
+void lxl_lexer_reset(struct lxl_lexer *lexer) {
+    lexer->current = lexer->start;
 }
 
 size_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
