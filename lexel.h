@@ -181,6 +181,10 @@ struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
     return lxl_lexer_new(sv.start, LXL_SV_END(sv));
 }
 
+bool lxl_lexer_is_finished(struct lxl_lexer *lexer) {
+    return lexer->reached_end;
+}
+
 void lxl_lexer_reset(struct lxl_lexer *lexer) {
     lexer->current = lexer->start;
 }
