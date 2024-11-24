@@ -103,6 +103,9 @@ int lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s);
 // and consume them if so.
 int lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
 
+// Advance the lexer past any whitespace characters and return the number of characters consumed.
+int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
+
 // END LEXER INTERNAL INTERFACE.
 
 
@@ -127,8 +130,11 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 
 #ifdef LEXEL_IMPLEMENTATION
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
+
+// LEXER FUNCTIONS.
 
 struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
     return (struct lxl_lexer) {
@@ -210,6 +216,19 @@ int lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n) 
     return false;
 }
 
+int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
+    int count = 0;
+    while (isspace(*lexer->current)) {
+        if (!lxl_lexer__advance(lexer)) break;
+        ++count;
+    }
+    return count;
+}
+
+// END LEXER FUNCTIONS.
+
+// STRING VIEW FUNCTIONS.
+
 struct lxl_string_view lxl_sv_from_string(const char *s) {
     return (struct lxl_string_view) {.start = s, .length = strlen(s)};
 }
@@ -217,6 +236,8 @@ struct lxl_string_view lxl_sv_from_string(const char *s) {
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) {
     return (struct lxl_string_view) {.start = start, .length = end - start};
 }
+
+// END STRING VIEW FUNCTIONS.
 
 #undef LEXEL_IMPLEMENTATION
 #endif  // LEXEL_IMPLEMENTATION
