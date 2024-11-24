@@ -7,10 +7,12 @@
 
 // These are the core definitions for lexel -- the lexer and token.
 
+// The line and column position with text.
 struct lxl_location {
     int line, column;
 };
 
+// The main lexer object.
 struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
     const char *end;          // The end of the lexer's source code.
@@ -18,6 +20,13 @@ struct lxl_lexer {
     struct lxl_location pos;  // The current position (line, col) in the source.
 };
 
+// A lexical token.
+// The token's value is stored as a string (via the `start` and `end` pointers).
+// Further processing of this value is left to the caller.
+// The `token_type` determines the type of the token. The meanings of different types
+// is left to the caller, but negative types are reserved by lexel and have special
+// meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
+// token stream.
 struct lxl_token {
     const char *start;        // The start of the token.
     const char *end;          // The end of the token.
@@ -31,6 +40,8 @@ struct lxl_token {
 
 // Additional definitions beyond the core above.
 
+// A string view.
+// This is a read-only (non-owning) view into a string, consiting of a `start` pointer and `length`.
 struct lxl_string_view {
     const char *start;
     size_t length;
