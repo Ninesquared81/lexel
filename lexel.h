@@ -7,16 +7,22 @@
 
 // These are the core definitions for lexel -- the lexer and token.
 
+struct lxl_location {
+    int line, column;
+};
+
 struct lxl_lexer {
-    const char *start;  // The start of the lexer's source code.
-    const char *end;    // The end of the lexer's source code.
-    const char *current;
+    const char *start;             // The start of the lexer's source code.
+    const char *end;               // The end of the lexer's source code.
+    const char *current;           // Pointer to the current character.
+    struct lxl_location position;  // The current position (line, col) in the source.
 };
 
 struct lxl_token {
-    const char *start;  // The start of the token.
-    const char *end;    // The end of the token.
-    int token_type;     // The type of the lexical token. Negative values have special menanings.
+    const char *start;        // The start of the token.
+    const char *end;          // The end of the token.
+    struct lxl_location loc;  // The location (line, col) of the token in the source.
+    int token_type;           // The type of the lexical token. Negative values have special meanings.
 };
 
 // END LEXEL CORE.
