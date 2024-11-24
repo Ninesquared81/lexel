@@ -19,6 +19,7 @@ struct lxl_lexer {
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
     struct lxl_location pos;  // The current position (line, col) in the source.
+    bool reached_end;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
 
 // A lexical token.
@@ -171,6 +172,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .start = start,
         .end = end,
         .current = start,
+        .pos = {0, 0},
+        .reached_end = false,
     };
 }
 
