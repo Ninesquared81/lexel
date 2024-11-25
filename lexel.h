@@ -139,8 +139,10 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
 
-// Create a an unitialised token starting at the lexer's current position.
+// Create an unitialised token starting at the lexer's current position.
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer);
+// Finish the token ending at the lexer's current position.
+void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token);
 
 // END LEXER INTERNAL INTERFACE.
 
@@ -283,6 +285,10 @@ struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
         .loc = lexer->pos,
         .token_type = LXL_TOKEN_UNINIT,
     };
+}
+
+void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
+    token->end = lexer->current;
 }
 
 // END LEXER FUNCTIONS.
