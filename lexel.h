@@ -58,6 +58,7 @@ struct lxl_string_view {
 
 enum lxl__token_mvs {
     LXL_TOKENS_END = -1,
+    LXL_TOKEN_UNINIT = -2,
 };
 
 // END LEXEL MAGIC VALUES.
@@ -138,6 +139,9 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
 
+// Create a an unitialised token starting at the lexer's current position.
+struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer);
+
 // END LEXER INTERNAL INTERFACE.
 
 
@@ -179,6 +183,12 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
 
 struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
     return lxl_lexer_new(sv.start, LXL_SV_END(sv));
+}
+
+struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
+    lxl_lexer__skip_whitespace(lexer);
+    struct lxl_token token = lxl_lexer__start_token(lexer);
+    return token;
 }
 
 bool lxl_lexer_is_finished(struct lxl_lexer *lexer) {
@@ -264,6 +274,15 @@ int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
         ++count;
     }
     return count;
+}
+
+struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
+    return (struct lxl_token) {
+        .start = lexer->current,
+        .end = lexer->current,
+        .loc = lexer->pos,
+        .token_type = LXL_TOKEN_UNINIT,
+    };
 }
 
 // END LEXER FUNCTIONS.
