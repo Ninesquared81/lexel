@@ -195,6 +195,8 @@ struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
 struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     lxl_lexer__skip_whitespace(lexer);
     struct lxl_token token = lxl_lexer__start_token(lexer);
+    lxl_lexer__lex_symbolic(lexer);
+    lxl_lexer__finish_token(lexer, &token);
     return token;
 }
 
