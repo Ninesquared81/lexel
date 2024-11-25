@@ -15,5 +15,10 @@ int main(void) {
         i += lxl_lexer__skip_whitespace(&lexer);
         printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer));
     }
+    lxl_lexer_reset(&lexer);
+    struct lxl_token token = lxl_lexer_next_token(&lexer);
+    printf("Token: '%.*s', type = %d\n",
+           (int)(token.end - token.start), token.start,
+           token.token_type);
     return 0;
 }
