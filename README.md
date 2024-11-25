@@ -34,9 +34,9 @@ create the lexer from a string view instead.
 
 As an example, let us take the string `"1 2 +"`, which we want to lex. We can create the lexer like so:
 
-    struct lxl_lexer lexer = lxl_lexer_from_sv(SV_FROM_STRLIT("1 2 +"));
+    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("1 2 +"));
 
-The macro `SV_FROM_STRLIT()` creates a string view object from a C string literal. It uses `sizeof` to
+The macro `LXL_SV_FROM_STRLIT()` creates a string view object from a C string literal. It uses `sizeof` to
 calculate the length, so should only be used with an actual string literal.
 
 ## Naming conventions
