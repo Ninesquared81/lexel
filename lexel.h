@@ -197,6 +197,9 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     struct lxl_token token = lxl_lexer__start_token(lexer);
     lxl_lexer__lex_symbolic(lexer);
     lxl_lexer__finish_token(lexer, &token);
+    if (lxl_lexer__is_at_end(lexer)) {
+        lexer->is_finished = true;
+    }
     return token;
 }
 
