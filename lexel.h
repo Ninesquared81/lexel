@@ -61,6 +61,9 @@ enum lxl__token_mvs {
     LXL_TOKEN_UNINIT = -2,
 };
 
+// A string contining all the characters lexel considers whitespace.
+#define LXL_WHITESPACE_CHARS " \t\n\r\f\v"
+
 // END LEXEL MAGIC VALUES.
 
 
@@ -168,7 +171,6 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 
 #ifdef LEXEL_IMPLEMENTATION
 
-#include <ctype.h>
 #include <string.h>
 
 // LEXER FUNCTIONS.
@@ -241,6 +243,10 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
     return strncmp(lexer->current, s, lexer->end - lexer->current) == 0;
 }
 
+bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
+}
+
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
     size_t tail_length = lxl_lexer__tail_length(lexer);
     if (n < tail_length) n = tail_length;
@@ -271,7 +277,7 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
     int count = 0;
-    while (isspace(*lexer->current)) {
+    while (lxl_lexer__check_whitespace(lexer)) {
         if (!lxl_lexer__advance(lexer)) break;
         ++count;
     }
