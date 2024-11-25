@@ -184,7 +184,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .end = end,
         .current = start,
         .pos = {0, 0},
-        .reached_end = false,
+        .is_finished = false,
     };
 }
 
