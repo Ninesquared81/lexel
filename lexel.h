@@ -147,6 +147,9 @@ struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer);
 // Finish the token ending at the lexer's current position.
 void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token);
 
+// Consume all non-whitespace characters and return the number consumed.
+int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
+
 // END LEXER INTERNAL INTERFACE.
 
 
@@ -295,6 +298,15 @@ struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
 
 void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
     token->end = lexer->current;
+}
+
+int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
+    int count = 0;
+    while (!lxl_lexer__is_at_end(lexer) && !lxl_lexer__check_whitespace(lexer)) {
+        lxl_lexer__advance(lexer);
+        ++count;
+    }
+    return count;
 }
 
 // END LEXER FUNCTIONS.
