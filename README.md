@@ -38,3 +38,9 @@ As an example, let us take the string `"1 2 +"`, which we want to lex. We can cr
 
 The macro `SV_FROM_STRLIT()` creates a string view object from a C string literal. It uses `sizeof` to
 calculate the length, so should only be used with an actual string literal.
+
+## Naming conventions
+
+All lexel identifiers start with the `lxl_` prefix
+(macros/enum constants are in capitals, functions are lowercase). Any identifier starting with such a
+prefix (case-insensitive) is reserved by lexel so should not be used by callers.
