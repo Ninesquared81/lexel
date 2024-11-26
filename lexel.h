@@ -209,6 +209,7 @@ bool lxl_lexer_is_finished(struct lxl_lexer *lexer) {
 
 void lxl_lexer_reset(struct lxl_lexer *lexer) {
     lexer->current = lexer->start;
+    lexer->is_finished = false;
 }
 
 size_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
