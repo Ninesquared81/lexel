@@ -74,6 +74,9 @@ enum lxl__token_mvs {
 // Return whether `tok` is a special TOKENS_END token.
 #define LXL_TOKEN_IS_END(tok) (tok).token_type = LXL_TOKENS_END
 
+// Return the token's value as a string view.
+struct lxl_string_view lxl_token_value(struct lxl_token token);
+
 // END TOKEN INTERFACE.
 
 
@@ -177,6 +180,15 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 #ifdef LEXEL_IMPLEMENTATION
 
 #include <string.h>
+
+// TOKEN FUNCTIONS.
+
+struct lxl_string_view lxl_token_value(struct lxl_token token) {
+    return lxl_sv_from_startend(token.start, token.end);
+}
+
+// END TOKEN FUNCTIONS.
+
 
 // LEXER FUNCTIONS.
 
