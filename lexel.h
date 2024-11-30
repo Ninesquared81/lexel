@@ -218,6 +218,11 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end)
 // Get a pointer to (one past) the end of a string view.
 #define LXL_SV_END(sv) (sv).start + (sv).length
 
+// Format specifier for printf et al.
+#define LXL_SV_FMT_SPEC "%.*s"
+// Use when printing a string view with LXL_SV_FMT_SPEC. The argument is evalucated multiple times.
+#define LXL_SV_FMT_ARG(sv) ((sv).length < INT_MAX) ? (int)(sv).length : INT_MAX, (sv).start
+
 // END LEXEL STRING VIEW.
 
 
