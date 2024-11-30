@@ -265,7 +265,10 @@ bool lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
 }
 
 bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
-    return strncmp(lexer->current, s, lexer->end - lexer->current) == 0;
+    size_t tail_length = lxl_lexer__tail_length(lexer);
+    size_t n = strlen(s);
+    if (n > tail_length) return false;
+    return memcmp(lexer->current, s, n) == 0;
 }
 
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
