@@ -133,6 +133,8 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
 // but do not consume them.
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
+// Return whether the current character is whitespace (see LXL_WHITESPACE_CHARS).
+bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
 
 // Return whether the current character matches any of those passed, and consume it if so.
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars);
@@ -266,14 +268,14 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
     return strncmp(lexer->current, s, lexer->end - lexer->current) == 0;
 }
 
-bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
-    return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
-}
-
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
     size_t tail_length = lxl_lexer__tail_length(lexer);
     if (n < tail_length) n = tail_length;
     return strncmp(lexer->current, s, n) == 0;
+}
+
+bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
 }
 
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
