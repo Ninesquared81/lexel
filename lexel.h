@@ -216,7 +216,7 @@ struct lxl_string_view lxl_sv_from_string(const char *s);
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char * end);
 
 // Get a pointer to (one past) the end of a string view.
-#define LXL_SV_END(sv) (sv).start + (sv).length
+#define LXL_SV_END(sv) ((sv).start + (sv).length)
 
 // Format specifier for printf et al.
 #define LXL_SV_FMT_SPEC "%.*s"
