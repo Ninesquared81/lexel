@@ -117,6 +117,8 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer);
 // Return the number of characters left in the lexer's source.
 ptrdiff_t lxl_lexer__tail_length(struct lxl_lexer *lexer);
+// Return the number of characters consumed after `start_point`.
+ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_point);
 
 // Return whether the lexer is at the end of its input.
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer);
@@ -240,6 +242,10 @@ ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
 
 ptrdiff_t lxl_lexer__tail_length(struct lxl_lexer *lexer) {
     return lexer->end - lexer->current;
+}
+
+ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_point) {
+    return lexer->current - start_point;
 }
 
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer) {
