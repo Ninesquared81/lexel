@@ -13,6 +13,14 @@ struct lxl_location {
     int line, column;
 };
 
+// Lex error codes.
+enum lxl_lex_error {
+    LXL_LERR_OK = 0,                  // No error.
+    LXL_LERR_GENERIC = -16,           // Generic error.
+    LXL_LERR_EOF = -17,               // Unexepected EOF.
+    LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
+};
+
 // The main lexer object.
 struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
@@ -20,6 +28,7 @@ struct lxl_lexer {
     const char *current;      // Pointer to the current character.
     struct lxl_location pos;  // The current position (line, col) in the source.
     const char *const *line_comment_openers;  // List of line comment openers.
+    enum lxl_lex_error error; // Error code set to the current lexing error.
     bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
 
@@ -60,6 +69,7 @@ struct lxl_string_view {
 enum lxl__token_mvs {
     LXL_TOKENS_END = -1,
     LXL_TOKEN_UNINIT = -2,
+    // See enum lxl_lex_error for token error types.
 };
 
 // A string contining all the characters lexel considers whitespace.
@@ -77,6 +87,9 @@ enum lxl__token_mvs {
 
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);
+
+// Return a textual representation of the error code.
+const char *lxl_error_message(enum lxl_lex_error error);
 
 // END TOKEN INTERFACE.
 
@@ -196,6 +209,16 @@ struct lxl_string_view lxl_token_value(struct lxl_token token) {
     return lxl_sv_from_startend(token.start, token.end);
 }
 
+const char *lxl_error_message(enum lxl_lex_error error) {
+    switch (error) {
+    case LXL_LERR_OK: return "No error";
+    case LXL_LERR_GENERIC: return "Generic error";
+    case LXL_LERR_EOF: return "Unexpected EOF";
+    case LXL_LERR_UNCLOSED_COMMENT: return "Unclosed block comment";
+    }
+    return NULL;  // Unreachable.
+}
+
 // END TOKEN FUNCTIONS.
 
 
@@ -217,8 +240,14 @@ struct lxl_lexer lxl_lexer_from_sv(struct lxl_string_view sv) {
 }
 
 struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
+    if (lxl_lexer_is_finished(lexer)) {
+        return lxl_lexer__create_end_token(lexer);
+    }
     lxl_lexer__skip_whitespace(lexer);
-    if (lxl_lexer__is_at_end(lexer)) {
+    if (lexer->error) {
+        return lxl_lexer__create_error_token(lexer);
+    }
+    else if (lxl_lexer__is_at_end(lexer)) {
         return lxl_lexer__create_end_token(lexer);
     }
     struct lxl_token token = lxl_lexer__start_token(lexer);
