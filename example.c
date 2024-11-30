@@ -23,9 +23,8 @@ int main(void) {
         /*        *lexer.current, */
         /*        lxl_lexer__check_line_comment(&lexer)); */
         struct lxl_token token = lxl_lexer_next_token(&lexer);
-        printf("Token %d: '%.*s' [type = %d]\n", i,
-               (int)(token.end - token.start), token.start,
-               token.token_type);
+        struct lxl_string_view sv = lxl_token_value(token);
+        printf("Token %d: '"LXL_SV_FMT_SPEC"' [type = %d]\n", i, LXL_SV_FMT_ARG(sv), token.token_type);
         if (token.token_type <= LXL_LERR_GENERIC) {
             printf("Error: %s.\n", lxl_error_message(token.token_type));
         }
