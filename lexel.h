@@ -21,13 +21,21 @@ enum lxl_lex_error {
     LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
 };
 
+// A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
+struct delim_pair {
+    const char *opener;
+    const char *closer;
+};
+
 // The main lexer object.
 struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
     struct lxl_location pos;  // The current position (line, col) in the source.
-    const char *const *line_comment_openers;  // List of line comment openers.
+    const char *const *line_comment_openers;             // List of line comment openers.
+    const struct delim_pair *nestable_comment_delims;    // List of paired nestable block comment delimiters.
+    const struct delim_pair *unnestable_comment_delims;  // List of paired unnestable block comment delimiters.
     enum lxl_lex_error error; // Error code set to the current lexing error.
     bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
@@ -161,18 +169,34 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
 // and consume them if so.
 bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
+// Return whether the next characters comprise a line comment, and consume them if so.
+bool lxl_lexer__match_line_comment(struct lxl_lexer *lexer);
+// Return wheteher the next characters comprise a block comment, and consume them if so.
+bool lxl_lexer__match_block_comment(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a nestable block comment, and consume them if so.
+bool lxl_lexer__match_nestable_comment(struct lxl_lexer *lexer);
+// Return whether the next characters comprise an unnestable block comment, and consume them if so.
+bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
 // Advance the lexer past the rest of the current line and return the number of characters consumed.
 int lxl_lexer__skip_line(struct lxl_lexer *lexer);
+// Advance the lexer past the current (possibly nestable) block comment (opener already consumed)
+// and return the number of characters consumed.
+int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct delim_pair delims, bool nested);
 
 // Create an unitialised token starting at the lexer's current position.
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer);
-// Finish the token ending at the lexer's current position.
+// Finish the token ending at the lexer's current position. If an error ocurred during lexing of this
+// token, emit an error token instead. The value still includes all the characters lexed.
 void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token);
 // Create a special `LXL_TOKENS_END` token at the lexer's current position.
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer);
+// Create a special error token at the lexer's current position. If the lexer has no error set, use
+// LXL_LERR_GENERIC as the error type. Note that this function will not include a value in the token.
+// To emit a non-empty error token, use `lxl_lexer__finish_token()` instead.
+struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer);
 
 // Consume all non-whitespace characters and return the number consumed.
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
@@ -231,6 +255,9 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .current = start,
         .pos = {0, 0},
         .line_comment_openers = NULL,
+        .nestable_comment_delims = NULL,
+        .unnestable_comment_delims = NULL,
+        .error = LXL_LERR_OK,
         .is_finished = false,
     };
 }
@@ -354,34 +381,91 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
     return false;
 }
 
+bool lxl_lexer__match_line_comment(struct lxl_lexer *lexer) {
+    if (!lxl_lexer__check_line_comment(lexer)) return false;
+    lxl_lexer__skip_line(lexer);
+    return true;
+}
+
+bool lxl_lexer__match_block_comment(struct lxl_lexer *lexer) {
+    if (lxl_lexer__match_nestable_comment(lexer)) return true;
+    return lxl_lexer__match_unnestable_comment(lexer);
+}
+
+bool lxl_lexer__match_nestable_comment(struct lxl_lexer *lexer) {
+    if (lexer->nestable_comment_delims == NULL) return false;
+    for (const struct delim_pair *delims = lexer->nestable_comment_delims;
+         delims->opener != NULL;
+         ++delims) {
+        if (lxl_lexer__match_string(lexer, delims->opener)) {
+            lxl_lexer__skip_block_comment(lexer, *delims, true);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer) {
+    if (lexer->unnestable_comment_delims == NULL) return false;
+    for (const struct delim_pair *delims = lexer->unnestable_comment_delims;
+         delims->opener != NULL;
+         ++delims) {
+        if (lxl_lexer__match_string(lexer, delims->opener)) {
+            lxl_lexer__skip_block_comment(lexer, *delims, false);
+            return true;
+        }
+    }
+    return false;
+}
+
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
-    int count = 0;
+    const char *whitespace_start = lexer->current;
     for(;;) {
         if (lxl_lexer__check_whitespace(lexer)) {
             // Whitespace, skip.
             if (!lxl_lexer__advance(lexer)) break;
-            ++count;
         }
-        else if (lxl_lexer__check_line_comment(lexer)) {
-            // Line comment, skip.
-            count += lxl_lexer__skip_line(lexer);
+        else if (lxl_lexer__match_line_comment(lexer)) {
+            /* Do nothing; comment already consumed. */
+        }
+        else if (lxl_lexer__match_block_comment(lexer)) {
+            /* Do nothing; comment already consumed. */
         }
         else {
             // Not a comment or whitespace.
             break;
         }
     }
-    return count;
+    return lxl_lexer__length_from(lexer, whitespace_start);
 }
 
 int lxl_lexer__skip_line(struct lxl_lexer *lexer) {
-    int count = 0;
+    const char *line_start = lexer->current;
     // NOTE: Use `match()` to consume the final `\n` along with the comment.
     while (!lxl_lexer__match_chars(lexer, "\n")) {
         if (!lxl_lexer__advance(lexer)) break;
-        ++count;
     }
-    return count;
+    return lxl_lexer__length_from(lexer, line_start);
+}
+
+int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct delim_pair delims, bool nestable) {
+    const char *comment_start = lexer->start;
+    while (!lxl_lexer__match_string(lexer, delims.closer)) {
+        if (nestable && lxl_lexer__match_string(lexer, delims.opener)) {
+            if (lxl_lexer__skip_block_comment(lexer, delims, true) <= 0) {
+                // Unclosed nested comment.
+                lexer->error = LXL_LERR_UNCLOSED_COMMENT;
+                break;
+            }
+        }
+        else {
+            if (!lxl_lexer__advance(lexer)) {
+                lexer->error = LXL_LERR_UNCLOSED_COMMENT;
+                break;
+            }
+        }
+    }
+    return lxl_lexer__length_from(lexer, comment_start);
 }
 
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
@@ -395,12 +479,23 @@ struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
 
 void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
     token->end = lexer->current;
+    if (lexer->error) {
+        token->token_type = lexer->error;  // Set error as token type.
+        lexer->error = LXL_LERR_OK;  // Clear error.
+    }
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
     struct lxl_token token = lxl_lexer__start_token(lexer);
     token.token_type = LXL_TOKENS_END;
     lexer->is_finished = true;
+    return token;
+}
+
+struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer) {
+    struct lxl_token token = lxl_lexer__start_token(lexer);
+    if (!lexer->error) lexer->error = LXL_LERR_GENERIC;  // Emit a generic error token if no error is set.
+    lxl_lexer__finish_token(lexer, &token);  // This function handles setting the error type.
     return token;
 }
 
