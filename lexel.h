@@ -1,7 +1,7 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <stddef.h>   // size_t
+#include <stddef.h>   // size_t, ptrdiff_t
 #include <stdbool.h>  // bool, false, true -- requires C99
 
 // LEXEL CORE.
@@ -114,9 +114,9 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 
 
 // Return the number of characters consumed so far.
-size_t lxl_lexer__head_length(struct lxl_lexer *lexer);
+ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer);
 // Return the number of characters left in the lexer's source.
-size_t lxl_lexer__tail_length(struct lxl_lexer *lexer);
+ptrdiff_t lxl_lexer__tail_length(struct lxl_lexer *lexer);
 
 // Return whether the lexer is at the end of its input.
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer);
@@ -234,11 +234,11 @@ void lxl_lexer_reset(struct lxl_lexer *lexer) {
     lexer->is_finished = false;
 }
 
-size_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
+ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
     return lexer->current - lexer->start;
 }
 
-size_t lxl_lexer__tail_length(struct lxl_lexer *lexer) {
+ptrdiff_t lxl_lexer__tail_length(struct lxl_lexer *lexer) {
     return lexer->end - lexer->current;
 }
 
