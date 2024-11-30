@@ -289,7 +289,7 @@ char lxl_lexer__advance(struct lxl_lexer *lexer) {
 
 bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n) {
     size_t tail_length = lxl_lexer__tail_length(lexer);
-    if (n < tail_length) {
+    if (tail_length < n) {
         lexer->current = lexer->end;
         return false;
     }
