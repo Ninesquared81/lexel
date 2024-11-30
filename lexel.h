@@ -19,6 +19,7 @@ struct lxl_lexer {
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
     struct lxl_location pos;  // The current position (line, col) in the source.
+    const char *const *line_comment_openers;  // List of line comment openers.
     bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
 
@@ -135,6 +136,8 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s);
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
 // Return whether the current character is whitespace (see LXL_WHITESPACE_CHARS).
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
+// Return whether the current character is a line comment opener.
+bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
 
 // Return whether the current character matches any of those passed, and consume it if so.
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars);
@@ -146,6 +149,8 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
+// Advance the lexer past the rest of the current line and return the number of characters consumed.
+int lxl_lexer__skip_line(struct lxl_lexer *lexer);
 
 // Create an unitialised token starting at the lexer's current position.
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer);
@@ -200,6 +205,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .end = end,
         .current = start,
         .pos = {0, 0},
+        .line_comment_openers = NULL,
         .is_finished = false,
     };
 }
@@ -281,6 +287,16 @@ bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
     return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
 }
 
+bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
+    if (lexer->line_comment_openers == NULL) return false;
+    for (const char *const *opener = lexer->line_comment_openers; *opener != NULL; ++opener) {
+        if (lxl_lexer__check_string(lexer, *opener)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
     if (lxl_lexer__check_chars(lexer, chars)) {
         return !!lxl_lexer__advance(lexer);
@@ -305,7 +321,28 @@ bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
     int count = 0;
-    while (lxl_lexer__check_whitespace(lexer)) {
+    for(;;) {
+        if (lxl_lexer__check_whitespace(lexer)) {
+            // Whitespace, skip.
+            if (!lxl_lexer__advance(lexer)) break;
+            ++count;
+        }
+        else if (lxl_lexer__check_line_comment(lexer)) {
+            // Line comment, skip.
+            count += lxl_lexer__skip_line(lexer);
+        }
+        else {
+            // Not a comment or whitespace.
+            break;
+        }
+    }
+    return count;
+}
+
+int lxl_lexer__skip_line(struct lxl_lexer *lexer) {
+    int count = 0;
+    // NOTE: Use `match()` to consume the final `\n` along with the comment.
+    while (!lxl_lexer__match_chars(lexer, "\n")) {
         if (!lxl_lexer__advance(lexer)) break;
         ++count;
     }
