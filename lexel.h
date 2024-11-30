@@ -1,8 +1,9 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <stddef.h>   // size_t, ptrdiff_t
 #include <stdbool.h>  // bool, false, true -- requires C99
+#include <stddef.h>   // size_t, ptrdiff_t
+#include <limits.h>   // INT_MAX
 
 // LEXEL CORE.
 
