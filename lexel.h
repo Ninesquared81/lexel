@@ -151,8 +151,10 @@ char lxl_lexer__advance(struct lxl_lexer *lexer);
 // reaches the end and stops).
 bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n);
 
-// Return whether the current character matches any of those passed, but do not consume it.
-bool lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars);
+// Return non-NULL if the current current matches any of those passed but do not consume it, otherwise,
+// return NULL. On success, the return value is the pointer to the matching character, i.e., into the
+// null-terminated string `chars`.
+const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars);
 // Return whether the next characters match exactly the string passed, but do not consume them.
 bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
@@ -163,8 +165,10 @@ bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
 // Return whether the current character is a line comment opener.
 bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
 
-// Return whether the current character matches any of those passed, and consume it if so.
-bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars);
+// Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
+// return NULL. On success, the return value is the pointer to the matching character, i.e., into the
+// null-terminated string `chars`.
+const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars);
 // Return whether the next characters match exactly the string passed, and consume them if so.
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
@@ -330,12 +334,12 @@ bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n) {
     return true;
 }
 
-bool lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
+const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
     while (*chars != '\0') {
-        if (*lexer->current == *chars) return true;
+        if (*lexer->current == *chars) return chars;
         ++chars;
     }
-    return false;
+    return NULL;
 }
 
 bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
@@ -365,11 +369,12 @@ bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
     return false;
 }
 
-bool lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
-    if (lxl_lexer__check_chars(lexer, chars)) {
-        return !!lxl_lexer__advance(lexer);
+const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
+    const char *p = lxl_lexer__check_chars(lexer, chars);
+    if (p != NULL) {
+        lxl_lexer__advance(lexer);
     }
-    return false;
+    return p;
 }
 
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s) {
