@@ -20,6 +20,7 @@ enum lxl_lex_error {
     LXL_LERR_GENERIC = -16,           // Generic error.
     LXL_LERR_EOF = -17,               // Unexepected EOF.
     LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
+    LXL_LERR_UNCLOSED_STRING = -19,   // A string-like literal had no closing delimiter before the end.
 };
 
 // A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
@@ -37,6 +38,9 @@ struct lxl_lexer {
     const char *const *line_comment_openers;             // List of line comment openers.
     const struct delim_pair *nestable_comment_delims;    // List of paired nestable block comment delimiters.
     const struct delim_pair *unnestable_comment_delims;  // List of paired unnestable block comment delimiters.
+    const char *string_delims;       // List of matched string (or character) literal delimiters.
+    const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
+    const int *string_types;         // List of token types associated with each string delimieter.
     enum lxl_lex_error error; // Error code set to the current lexing error.
     bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
@@ -182,6 +186,9 @@ bool lxl_lexer__match_block_comment(struct lxl_lexer *lexer);
 bool lxl_lexer__match_nestable_comment(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an unnestable block comment, and consume them if so.
 bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer);
+// Return non-NULL if the current character matches one of the lexer's string delimiters and consume it
+// if so, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
+const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
@@ -205,6 +212,8 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer);
 
 // Consume all non-whitespace characters and return the number consumed.
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
+// Consume a string-like token delimited by `delim` and return the number of characters read.
+int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim);
 
 // END LEXER INTERNAL INTERFACE.
 
@@ -249,6 +258,7 @@ const char *lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_GENERIC: return "Generic error";
     case LXL_LERR_EOF: return "Unexpected EOF";
     case LXL_LERR_UNCLOSED_COMMENT: return "Unclosed block comment";
+    case LXL_LERR_UNCLOSED_STRING: return "Unclosed string-like literal";
     }
     return NULL;  // Unreachable.
 }
@@ -267,6 +277,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .line_comment_openers = NULL,
         .nestable_comment_delims = NULL,
         .unnestable_comment_delims = NULL,
+        .string_delims = NULL,
+        .string_escape_chars = NULL,
         .error = LXL_LERR_OK,
         .is_finished = false,
     };
@@ -288,7 +300,15 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         return lxl_lexer__create_end_token(lexer);
     }
     struct lxl_token token = lxl_lexer__start_token(lexer);
-    lxl_lexer__lex_symbolic(lexer);
+    const char *string_delim = NULL;
+    if ((string_delim = lxl_lexer__match_string_delim(lexer))) {
+        lxl_lexer__lex_string(lexer, *string_delim);
+        int delim_index = string_delim - lexer->string_delims;
+        token.token_type = lexer->string_types[delim_index];
+    }
+    else {
+        lxl_lexer__lex_symbolic(lexer);
+    }
     lxl_lexer__finish_token(lexer, &token);
     return token;
 }
@@ -429,6 +449,11 @@ bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer) {
     return false;
 }
 
+const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer) {
+    if (lexer->string_delims == NULL) return NULL;
+    return lxl_lexer__match_chars(lexer, lexer->string_delims);
+}
+
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
     const char *whitespace_start = lexer->current;
     for(;;) {
@@ -517,6 +542,20 @@ int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
         ++count;
     }
     return count;
+}
+
+int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim) {
+    if (lexer->string_delims == NULL) return 0;  // No strings.
+    const char *start = lexer->current;
+    while (!lxl_lexer__match_string_n(lexer, &delim, 1)) {
+        lxl_lexer__match_chars(lexer, lexer->string_escape_chars);  // Consume escape character.
+        // Consume non-delimiter character or escaped delimiter.
+        if (!lxl_lexer__advance(lexer)) {
+            lexer->error = LXL_LERR_UNCLOSED_STRING;
+            return lxl_lexer__length_from(lexer, start);
+        }
+    }
+    return lxl_lexer__length_from(lexer, start);
 }
 
 // END LEXER FUNCTIONS.
