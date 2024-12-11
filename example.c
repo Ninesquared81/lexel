@@ -5,7 +5,7 @@
 
 int main(void) {
     printf("Hello, World!\n");
-    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("#hi\n  1 2 +  3 4 /* hi"));
+    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("#hi\n  1 2 +  3 4 /* hi*/\n\"Hello, World!\\n\""));
     /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
     /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
     /* } */
@@ -18,6 +18,9 @@ int main(void) {
     /* lxl_lexer_reset(&lexer); */
     lexer.line_comment_openers = (const char*[]){"#", NULL};
     lexer.unnestable_comment_delims = (const struct delim_pair[]){{"/*", "*/"}, {0}};
+    lexer.string_delims = "\"";
+    lexer.string_escape_chars = "\\";
+    lexer.string_types = (int []){0};
     for (int i = 0; !lxl_lexer_is_finished(&lexer); ++i) {
         /* printf("lxl_lexer__check_line_comment('%c'): %d\n", */
         /*        *lexer.current, */
