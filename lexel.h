@@ -400,14 +400,14 @@ const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s) {
     if (lxl_lexer__check_string(lexer, s)) {
         size_t length = strlen(s);
-        return !!lxl_lexer__advance_by(lexer, length);
+        return lxl_lexer__advance_by(lexer, length);
     }
     return false;
 }
 
 bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
     if (lxl_lexer__check_string_n(lexer, s, n)) {
-        return !!lxl_lexer__advance_by(lexer, n);
+        return lxl_lexer__advance_by(lexer, n);
     }
     return false;
 }
