@@ -88,6 +88,11 @@ enum lxl__token_mvs {
 // A string contining all the characters lexel considers whitespace.
 #define LXL_WHITESPACE_CHARS " \t\n\r\f\v"
 
+// A string containing the basic uppercase latin alphabet in order.
+#define LXL_BASIC_UPPER_LATIN_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// A string containing the basic lowercase latin alphabet in order.
+#define LXL_BASIC_LOWER_LATIN_CHARS "abcdefghijklmnopqrstuvwxyz"
+
 // END LEXEL MAGIC VALUES.
 
 
