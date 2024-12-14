@@ -94,6 +94,8 @@ enum lxl__token_mvs {
 #define LXL_BASIC_LOWER_LATIN_CHARS "abcdefghijklmnopqrstuvwxyz"
 // A string containing the basic mixed case latin alphabet in alphabetical order.
 #define LXL_BASIC_MIXED_LATIN_CHARS "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
+// A string containing the digits 0--9 in order.
+#define LXL_DIGITS "0123456789"
 
 // END LEXEL MAGIC VALUES.
 
