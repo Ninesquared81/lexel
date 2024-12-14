@@ -41,6 +41,12 @@ struct lxl_lexer {
     const char *string_delims;       // List of matched string (or character) literal delimiters.
     const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
     const int *string_types;         // List of token types associated with each string delimieter.
+    const char *const *number_signs;      // List of signs which can precede number literals (e.g. "+", "-").
+    const char *const *integer_prefixes;  // List of prefixes for integer literals.
+    int *integer_bases;                   // List of bases associated with each prefix.
+    const char *const *integer_suffixes;  // List of suffixes for integer literals.
+    int default_int_type;     // Default token type for integer literals.
+    int default_int_base;     // Default base for (unprefixed) integer literals.
     enum lxl_lex_error error; // Error code set to the current lexing error.
     bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
 };
@@ -299,6 +305,12 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .unnestable_comment_delims = NULL,
         .string_delims = NULL,
         .string_escape_chars = NULL,
+        .number_signs = NULL,
+        .integer_prefixes = NULL,
+        .integer_bases = NULL,
+        .integer_suffixes = NULL,
+        .default_int_type = LXL_LERR_GENERIC,
+        .default_int_base = 0,
         .error = LXL_LERR_OK,
         .is_finished = false,
     };
