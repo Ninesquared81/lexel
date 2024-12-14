@@ -181,7 +181,7 @@ bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
 // it, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
 const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
 // Return whether the current character is digit of the specified base but do not consume it. The base is
-// an integer in the range  2--36 (inclusive). For bases 11+, the letters a-z (case-insensitive) are
+// an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
 bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base);
 
@@ -205,6 +205,10 @@ bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer);
 // Return non-NULL if the current character matches one of the lexer's string delimiters and consume it
 // if so, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
 const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer);
+// Return whether the current character is digit of the specified base, and consume it if so. The base is
+// an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
+// used for digit values 10+ (as in hexadecimal).
+bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
@@ -480,6 +484,11 @@ bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer) {
 const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer) {
     if (lexer->string_delims == NULL) return NULL;
     return lxl_lexer__match_chars(lexer, lexer->string_delims);
+}
+
+bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base) {
+    if (!lxl_lexer__check_digit(lexer, base)) return false;
+    return lxl_lexer__advance(lexer);
 }
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
