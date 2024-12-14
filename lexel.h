@@ -168,6 +168,9 @@ bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
 // Return whether the current character is a line comment opener.
 bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
+// Return non-NULL if the current character matches one of the lexer's string delimiters but do not consume
+// it, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
+const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
 
 // Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
