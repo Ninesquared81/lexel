@@ -180,6 +180,10 @@ bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
 // Return non-NULL if the current character matches one of the lexer's string delimiters but do not consume
 // it, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
 const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
+// Return whether the current character is digit of the specified base but do not consume it. The base is
+// an integer in the range  2--36 (inclusive). For bases 11+, the letters a-z (case-insensitive) are
+// used for digit values 10+ (as in hexadecimal).
+bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base);
 
 // Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -404,6 +408,13 @@ bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
 const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer) {
     if (lexer->string_delims == NULL) return NULL;
     return lxl_lexer__check_chars(lexer, lexer->string_delims);
+}
+
+bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
+    char digits[] = LXL_DIGITS "" LXL_BASIC_MIXED_LATIN_CHARS;
+    int end_digit_index = (base <= 10) ? base : 10 + 2*(base - 10);
+    digits[end_digit_index] = '\0';  // Truncate array to only contain the needed digits.
+    return lxl_lexer__check_chars(lexer, digits);
 }
 
 const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
