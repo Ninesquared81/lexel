@@ -5,17 +5,21 @@
 
 int main(void) {
     printf("Hello, World!\n");
-    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("#hi\n  1 2 +  3 4 /* hi*/\n\"Hello, World!\\n\""));
+    struct lxl_lexer lexer = lxl_lexer_from_sv(
+        LXL_SV_FROM_STRLIT("#hi\n  1 2 +  3 4 /* hi*/\n\"Hello, World!\\n\""));
     /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
     /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
     /* } */
     /* printf("Restting lexer...\n"); */
     /* lxl_lexer_reset(&lexer); */
-    /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
-    /*     i += lxl_lexer__skip_whitespace(&lexer); */
-    /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
-    /* } */
-    /* lxl_lexer_reset(&lexer); */
+    for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) {
+        i += lxl_lexer__skip_whitespace(&lexer);
+        int base = 20;
+        bool is_digit = lxl_lexer__check_digit(&lexer, base);
+        printf("Character %d: '%c', check_digit(%d): %d\n", i,
+               lxl_lexer__advance(&lexer), base, is_digit);
+    }
+    lxl_lexer_reset(&lexer);
     lexer.line_comment_openers = (const char*[]){"#", NULL};
     lexer.unnestable_comment_delims = (const struct delim_pair[]){{"/*", "*/"}, {0}};
     lexer.string_delims = "\"";
