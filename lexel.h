@@ -389,6 +389,11 @@ bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
     return false;
 }
 
+const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer) {
+    if (lexer->string_delims == NULL) return NULL;
+    return lxl_lexer__check_chars(lexer, lexer->string_delims);
+}
+
 const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
     const char *p = lxl_lexer__check_chars(lexer, chars);
     if (p != NULL) {
