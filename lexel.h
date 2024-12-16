@@ -240,6 +240,8 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer);
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
 // Consume a string-like token delimited by `delim` and return the number of characters read.
 int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim);
+// Consume the digits of an integer literal in the given base (2--36).
+int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base);
 
 // END LEXER INTERNAL INTERFACE.
 
@@ -603,6 +605,14 @@ int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim) {
             lexer->error = LXL_LERR_UNCLOSED_STRING;
             return lxl_lexer__length_from(lexer, start);
         }
+    }
+    return lxl_lexer__length_from(lexer, start);
+}
+
+int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
+    const char *start = lexer->current;
+    while (lxl_lexer__match_digit(lexer, base)) {
+        /* Do nothing; logic handled in loop condition. */
     }
     return lxl_lexer__length_from(lexer, start);
 }
