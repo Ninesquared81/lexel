@@ -6,7 +6,7 @@
 int main(void) {
     printf("Hello, World!\n");
     struct lxl_lexer lexer = lxl_lexer_from_sv(
-        LXL_SV_FROM_STRLIT("#hi\n  1 2 +  3 4 /* hi*/\n\"Hello, World!\\n\""));
+        LXL_SV_FROM_STRLIT("#hi\n  1029 22 +  31 3548 /* hi*/\n\"Hello, World!\\n\""));
     /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
     /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
     /* } */
@@ -14,10 +14,16 @@ int main(void) {
     /* lxl_lexer_reset(&lexer); */
     for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) {
         i += lxl_lexer__skip_whitespace(&lexer);
-        int base = 20;
-        bool is_digit = lxl_lexer__check_digit(&lexer, base);
-        printf("Character %d: '%c', check_digit(%d): %d\n", i,
-               lxl_lexer__advance(&lexer), base, is_digit);
+        int base = 10;
+        if (lxl_lexer__check_digit(&lexer, base)) {
+            const char *start = lexer.current;
+            lxl_lexer__lex_integer(&lexer, base);
+            struct lxl_string_view sv = lxl_sv_from_startend(start, lexer.current);
+            printf("Integer literal: '"LXL_SV_FMT_SPEC"'.\n", LXL_SV_FMT_ARG(sv));
+        }
+        else {
+            lxl_lexer__advance(&lexer);
+        }
     }
     lxl_lexer_reset(&lexer);
     lexer.line_comment_openers = (const char*[]){"#", NULL};
