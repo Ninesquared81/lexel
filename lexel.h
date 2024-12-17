@@ -164,6 +164,8 @@ ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_poin
 
 // Return whether the lexer is at the end of its input.
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer);
+// Return whether the lexer is at the start of its input.
+bool lxl_lexer__is_at_start(struct lxl_lexer *lexer);
 // Return the current character and advance the lexer to the next character.
 char lxl_lexer__advance(struct lxl_lexer *lexer);
 // Advance the lexer by up to n characters and return whether all n characters could be advanced
@@ -388,6 +390,10 @@ ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_poin
 
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer) {
     return lexer->current >= lexer->end;
+}
+
+bool lxl_lexer__is_at_start(struct lxl_lexer *lexer) {
+    return lexer->current <= lexer->start;
 }
 
 char lxl_lexer__advance(struct lxl_lexer *lexer) {
