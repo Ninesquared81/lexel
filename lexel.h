@@ -203,6 +203,8 @@ bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base);
 int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an integer literal suffix but do not consume them.
 bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a number literal sign (e.g. +, -) but do not consume them.
+bool lxl_lexer__check_number_sign(struct lxl_lexer *lexer);
 
 // Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -233,6 +235,8 @@ bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base);
 int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an integer literal suffix, and consume them if so.
 bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a number literal sign (e.g. +, -), and consume them if so.
+bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
@@ -481,13 +485,19 @@ bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
 }
 
 int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer) {
+    const char *start = lexer->current;
+    // Consume any leading sign to make detecting the prefix easier.
+    // We'll rewind the lexer before returning.
+    lxl_lexer__match_number_sign(lexer);
     if (lexer->integer_prefixes != NULL) {
         for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
             if (lxl_lexer__check_string(lexer, lexer->integer_prefixes[i])) {
+                lexer->current = start;
                 return lexer->integer_bases[i];
             }
         }
     }
+    lexer->current = start;
     return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
 }
 
@@ -570,6 +580,7 @@ bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base) {
 }
 
 int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer) {
+    lxl_lexer__match_number_sign(lexer);
     if (lexer->integer_prefixes != NULL) {
         for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
             if (lxl_lexer__match_string(lexer, lexer->integer_prefixes[i])) {
@@ -578,6 +589,14 @@ int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer) {
         }
     }
     return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
+}
+
+bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer) {
+    if (lexer->number_signs == NULL) return false;
+    for (const char *const *sign = lexer->number_signs; *sign != NULL; ++sign) {
+        if (lxl_lexer__match_string(lexer, *sign)) return true;
+    }
+    return false;
 }
 
 bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer) {
