@@ -21,6 +21,7 @@ enum lxl_lex_error {
     LXL_LERR_EOF = -17,               // Unexepected EOF.
     LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
     LXL_LERR_UNCLOSED_STRING = -19,   // A string-like literal had no closing delimiter before the end.
+    LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
 };
 
 // A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
@@ -190,6 +191,11 @@ const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
 bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base);
+// Return non-zero if the next characters comprise an integer literal prefix but do not consume them. The
+// return value is the base corresponding to the matched prefix.
+int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise an integer literal suffix but do not consume them.
+bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer);
 
 // Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -215,6 +221,11 @@ const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer);
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
 bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base);
+// Return non-zero if the next characters comprise an integer literal prefix, and consume them if so. The
+// return value is the base corresponding to the matched prefix.
+int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise an integer literal suffix, and consume them if so.
+bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
@@ -287,6 +298,7 @@ const char *lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_EOF: return "Unexpected EOF";
     case LXL_LERR_UNCLOSED_COMMENT: return "Unclosed block comment";
     case LXL_LERR_UNCLOSED_STRING: return "Unclosed string-like literal";
+    case LXL_LERR_INVALID_INTEGER: return "Inavlid integer";
     }
     return NULL;  // Unreachable.
 }
@@ -335,10 +347,16 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     }
     struct lxl_token token = lxl_lexer__start_token(lexer);
     const char *string_delim = NULL;
+    int int_base = 0;
     if ((string_delim = lxl_lexer__match_string_delim(lexer))) {
         lxl_lexer__lex_string(lexer, *string_delim);
         int delim_index = string_delim - lexer->string_delims;
         token.token_type = lexer->string_types[delim_index];
+    }
+    else if ((int_base = lxl_lexer__match_int_prefix(lexer))) {
+        int digit_count = lxl_lexer__lex_integer(lexer, int_base);
+        token.token_type = (digit_count > 0) ? lexer->default_int_type : LXL_LERR_INVALID_INTEGER;
+        lxl_lexer__match_int_suffix(lexer);
     }
     else {
         lxl_lexer__lex_symbolic(lexer);
@@ -435,6 +453,25 @@ bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
     return lxl_lexer__check_chars(lexer, digits);
 }
 
+int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer) {
+    if (lexer->integer_prefixes != NULL) {
+        for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
+            if (lxl_lexer__check_string(lexer, lexer->integer_prefixes[i])) {
+                return lexer->integer_bases[i];
+            }
+        }
+    }
+    return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
+}
+
+bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer) {
+    if (lexer->integer_suffixes == NULL) return false;
+    for (int i = 0; lexer->integer_suffixes[i] != NULL; ++i) {
+        if (lxl_lexer__check_string(lexer, lexer->integer_suffixes[i])) return true;
+    }
+    return false;
+}
+
 const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
     const char *p = lxl_lexer__check_chars(lexer, chars);
     if (p != NULL) {
@@ -503,6 +540,25 @@ const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer) {
 bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base) {
     if (!lxl_lexer__check_digit(lexer, base)) return false;
     return lxl_lexer__advance(lexer);
+}
+
+int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer) {
+    if (lexer->integer_prefixes != NULL) {
+        for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
+            if (lxl_lexer__match_string(lexer, lexer->integer_prefixes[i])) {
+                return lexer->integer_bases[i];
+            }
+        }
+    }
+    return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
+}
+
+bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer) {
+    if (lexer->integer_suffixes == NULL) return false;
+    for (int i = 0; lexer->integer_suffixes[i] != NULL; ++i) {
+        if (lxl_lexer__match_string(lexer, lexer->integer_suffixes[i])) return true;
+    }
+    return false;
 }
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
