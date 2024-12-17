@@ -172,6 +172,11 @@ char lxl_lexer__advance(struct lxl_lexer *lexer);
 // (this will be false when there are fewer than n characters left, in which case, the lexer
 // reaches the end and stops).
 bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n);
+// Rewind the lexer to the previous character and return whether the rewind was successful (the lexer
+// cannot be rewound beyond its starting point).
+bool lxl_lexer__rewind(struct lxl_lexer *lexer);
+// Rewind the lexer by up to n characters and return whether all n chracters could be rewound.
+bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
 
 // Return non-NULL if the current current matches any of those passed but do not consume it, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -409,6 +414,22 @@ bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n) {
         return false;
     }
     lexer->current += n;
+    return true;
+}
+
+bool lxl_lexer__rewind(struct lxl_lexer *lexer) {
+    if (lxl_lexer__is_at_start(lexer)) return false;
+    --lexer->current;
+    return true;
+}
+
+bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n) {
+    size_t head_length = lxl_lexer__head_length(lexer);
+    if (head_length < n) {
+        lexer->current = lexer->start;
+        return false;
+    }
+    lexer->current -= n;
     return true;
 }
 
