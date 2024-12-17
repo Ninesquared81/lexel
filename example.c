@@ -31,6 +31,8 @@ int main(void) {
     lexer.string_delims = "\"";
     lexer.string_escape_chars = "\\";
     lexer.string_types = (int []){0};
+    lexer.default_int_base = 10;
+    lexer.default_int_type = 1;
     for (int i = 0; !lxl_lexer_is_finished(&lexer); ++i) {
         /* printf("lxl_lexer__check_line_comment('%c'): %d\n", */
         /*        *lexer.current, */
