@@ -7,11 +7,6 @@ int main(void) {
     printf("Hello, World!\n");
     struct lxl_lexer lexer = lxl_lexer_from_sv(
         LXL_SV_FROM_STRLIT("#hi\n  1029 22 +  -31 +3548 +-9 0_12_2__ _0 /* hi*/\n\"Hello, World!\\n\""));
-    /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
-    /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
-    /* } */
-    /* printf("Restting lexer...\n"); */
-    /* lxl_lexer_reset(&lexer); */
     for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) {
         i += lxl_lexer__skip_whitespace(&lexer);
         int base = 10;
@@ -36,13 +31,10 @@ int main(void) {
     lexer.number_signs = (const char *[]){"+", "-", NULL};
     lexer.digit_separators = "_";
     for (int i = 0; !lxl_lexer_is_finished(&lexer); ++i) {
-        /* printf("lxl_lexer__check_line_comment('%c'): %d\n", */
-        /*        *lexer.current, */
-        /*        lxl_lexer__check_line_comment(&lexer)); */
         struct lxl_token token = lxl_lexer_next_token(&lexer);
         struct lxl_string_view sv = lxl_token_value(token);
         printf("Token %d: '"LXL_SV_FMT_SPEC"' [type = %d]\n", i, LXL_SV_FMT_ARG(sv), token.token_type);
-        if (token.token_type <= LXL_LERR_GENERIC) {
+        if (LXL_TOKEN_IS_ERROR(token)) {
             printf("Error: %s.\n", lxl_error_message(token.token_type));
         }
     }
