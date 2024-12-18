@@ -6,7 +6,7 @@
 int main(void) {
     printf("Hello, World!\n");
     struct lxl_lexer lexer = lxl_lexer_from_sv(
-        LXL_SV_FROM_STRLIT("#hi\n  1029 22 +  -31 +3548 +-9 /* hi*/\n\"Hello, World!\\n\""));
+        LXL_SV_FROM_STRLIT("#hi\n  1029 22 +  -31 +3548 +-9 0_12_2__ _0 /* hi*/\n\"Hello, World!\\n\""));
     /* for (int i = 0; !lxl_lexer__is_at_end(&lexer); ++i) { */
     /*     printf("Character %d: '%c'\n", i, lxl_lexer__advance(&lexer)); */
     /* } */
@@ -34,6 +34,7 @@ int main(void) {
     lexer.default_int_base = 10;
     lexer.default_int_type = 1;
     lexer.number_signs = (const char *[]){"+", "-", NULL};
+    lexer.digit_separators = "_";
     for (int i = 0; !lxl_lexer_is_finished(&lexer); ++i) {
         /* printf("lxl_lexer__check_line_comment('%c'): %d\n", */
         /*        *lexer.current, */
