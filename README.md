@@ -46,7 +46,7 @@ We can now try out the lexer by calling the `lxl_lexer_next_token()` function:
     printf("Token: '"LXL_SV_FMT_SPEC"' [type = %d]\n", LXL_SV_FMT_ARG(value), token.token_type);
 
 We have used a couple of helper functions and macros here. Firstly, `lxl_token_value()` extracts the value
-of a token as a string view, while the macros `LXL_SV_FMT_SPEC` and `LXL_SV_FMT_ARG()` allow use to print
+of a token as a string view, while the macros `LXL_SV_FMT_SPEC` and `LXL_SV_FMT_ARG()` allow us to print
 string views in `printf()` and similar functions. The `LXL_SV_FMT_ARG()` macro evaluates its argument
 multiple times, so be wary when using it with a complicated argument expression.
 
@@ -58,9 +58,9 @@ What's going on here, then?
 
 By default, the lexer emits tokens of the type `LXL_TOKEN_UNINIT` (value -2), with the rule that tokens
 comprise symbolic (non-whitespace) characters with whitespace characters as token separators.
-This may be good enough for the most basic of use cases, but lexel is capable of so much more.
-We do, however, need to set up the lexer to recognise certain tokens.
-Firstly, though, let's handle comments.
+This may be good enough for the most basic of use cases, but lexel is capable of so much more. Lexel makes
+very few assumptions about how things should be lexed, however, so we need to do a bit of work to customise
+it to our liking. Firstly, let's handle comments.
 
 Comments in lexel are treated like whitespace. They can be used to separate tokens and do not themselves
 constitute a token. Lexel supports three types of comment. Line comments can start anywhere on a line and run
@@ -79,7 +79,7 @@ For line comments, we have the field `.line_comment_openers`, which holds a NULL
 For block comments, we have the fields `.nestable_comment_delims` and `.unnestable_comment_delims` for
 nestable and unnestable block comments, respectively. These fields each hold a NULL-terminated array
 (via pointer) of `delim_pair` structures, which is a pair of strings for the opening and closing delimeter
-for a particular blokc comment style. To remove ambiguity, it is important that nestable and unnestable block
+for a particular block comment style. To remove ambiguity, it is important that nestable and unnestable block
 comments do not share the same openers or closers.
 
 Each of these three fields may be left as `NULL` if there are to be no comments of that type.
@@ -159,7 +159,7 @@ to be in the middle of a token instead of at the start/end of a token, leading t
 It's best to use the external interface when calling `lxl_next_token()` and only poke around in the lexer
 internals when absolutely necessary.
 
-Let's consolidate all we've done so far and put the lexing into a loop so whe can lex the whole input.
+Let's consolidate all we've done so far and put the lexing into a loop so we can lex the whole input.
 
     struct lxl_lexer lexer = lxl_lexer_from_sv(SV_FROMT_STRLIT("/*1*/ 2 #+\n3 /* unclosed");
     lexer.line_comment_openers = (const char *[]){"#", NULL};
