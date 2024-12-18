@@ -41,7 +41,8 @@ struct lxl_lexer {
     const struct delim_pair *unnestable_comment_delims;  // List of paired unnestable block comment delimiters.
     const char *string_delims;       // List of matched string (or character) literal delimiters.
     const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
-    const int *string_types;         // List of token types associated with each string delimieter.
+    const int *string_types;         // List of token types associated with each string delimiter.
+    const char *digit_separators;    // List of digit separator characters allowed in number literals.
     const char *const *number_signs;      // List of signs which can precede number literals (e.g. "+", "-").
     const char *const *integer_prefixes;  // List of prefixes for integer literals.
     int *integer_bases;                   // List of bases associated with each prefix.
@@ -198,6 +199,10 @@ const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
 bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base);
+// Return whether the current character is a digit separator but do not consume it.
+bool lxl_lexer__check_digit_separator(struct lxl_lexer *lexer);
+// Return whether the current character is a digit (see above) or digit separator but do not consume it.
+bool lxl_lexer__check_digit_or_separator(struct lxl_lexer *lexer, int base);
 // Return non-zero if the next characters comprise an integer literal prefix but do not consume them. The
 // return value is the base corresponding to the matched prefix.
 int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer);
@@ -230,6 +235,10 @@ const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer);
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
 bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base);
+// Return whether the current character is a digit separator but do not consume it.
+bool lxl_lexer__match_digit_separator(struct lxl_lexer *lexer);
+// Return whether the current character is a digit (see above) or digit separator, and consume it if so.
+bool lxl_lexer__match_digit_or_separator(struct lxl_lexer *lexer, int base);
 // Return non-zero if the next characters comprise an integer literal prefix, and consume them if so. The
 // return value is the base corresponding to the matched prefix.
 int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer);
@@ -331,6 +340,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .string_delims = NULL,
         .string_escape_chars = NULL,
         .number_signs = NULL,
+        .digit_separators = NULL,
         .integer_prefixes = NULL,
         .integer_bases = NULL,
         .integer_suffixes = NULL,
@@ -484,6 +494,15 @@ bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
     return lxl_lexer__check_chars(lexer, digits);
 }
 
+bool lxl_lexer__check_digit_separator(struct lxl_lexer *lexer) {
+    if (lexer->digit_separators == NULL) return false;
+    return lxl_lexer__check_chars(lexer, lexer->digit_separators);
+}
+
+bool lxl_lexer__check_digit_or_separator(struct lxl_lexer *lexer, int base) {
+    return lxl_lexer__check_digit(lexer, base) || lxl_lexer__check_digit_separator(lexer);
+}
+
 int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer) {
     const char *start = lexer->current;
     // Consume any leading sign to make detecting the prefix easier.
@@ -576,6 +595,16 @@ const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer) {
 
 bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base) {
     if (!lxl_lexer__check_digit(lexer, base)) return false;
+    return lxl_lexer__advance(lexer);
+}
+
+bool lxl_lexer__match_digit_separator(struct lxl_lexer *lexer) {
+    if (!lxl_lexer__check_digit_separator(lexer)) return false;
+    return lxl_lexer__advance(lexer);
+}
+
+bool lxl_lexer__match_digit_or_separator(struct lxl_lexer *lexer, int base) {
+    if (!lxl_lexer__check_digit_or_separator(lexer, base)) return false;
     return lxl_lexer__advance(lexer);
 }
 
@@ -713,8 +742,22 @@ int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim) {
 
 int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
     const char *start = lexer->current;
-    while (lxl_lexer__match_digit(lexer, base)) {
-        /* Do nothing; logic handled in loop condition. */
+    int digit_count = 0;
+    for (;;) {
+        if (lxl_lexer__match_digit(lexer, base)) {
+            ++digit_count;
+        }
+        else if (lxl_lexer__match_digit_separator(lexer)) {
+            /* Do nothing. */
+        }
+        else {
+            // Not a digit or separator.
+            break;
+        }
+    }
+    if (digit_count <= 0) {
+        // Un-lex token which is not a valid integer literal.
+        lexer->current = start;
     }
     return lxl_lexer__length_from(lexer, start);
 }
