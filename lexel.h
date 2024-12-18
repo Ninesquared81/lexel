@@ -113,7 +113,10 @@ enum lxl__token_mvs {
 // These functions are for working with tokens.
 
 // Return whether `tok` is a special TOKENS_END token.
-#define LXL_TOKEN_IS_END(tok) (tok).token_type = LXL_TOKENS_END
+#define LXL_TOKEN_IS_END(tok) ((tok).token_type = LXL_TOKENS_END)
+
+// Return whetehr `tok` is a special error token.
+#define LXL_TOKEN_IS_ERROR(tok) ((tok).token_type <= LXL_LERR_GENERIC)
 
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);
