@@ -13,7 +13,7 @@
 // Customisable options can be given custom definitions before including lexel.h.
 
 
-// LXL_IMPLEMENTATION enables implementation of lexel functions. It should be defined at most ONCE.
+// LEXEL_IMPLEMENTATION enables implementation of lexel functions. It should be defined at most ONCE.
 
 // LXL_NO_ASSERT disables lexel library assertions. This setting is independant of NDEBUG.
 
