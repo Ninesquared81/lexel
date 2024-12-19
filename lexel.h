@@ -77,9 +77,9 @@ struct lxl_lexer {
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
     struct lxl_location pos;  // The current position (line, col) in the source.
-    const char *const *line_comment_openers;             // List of line comment openers.
-    const struct delim_pair *nestable_comment_delims;    // List of paired nestable block comment delimiters.
-    const struct delim_pair *unnestable_comment_delims;  // List of paired unnestable block comment delimiters.
+    const char *const *line_comment_openers;            // List of line comment openers.
+    const struct delim_pair *nestable_comment_delims;   // List of paired nestable block comment delimiters.
+    const struct delim_pair *unnestable_comment_delims; // List of paired unnestable block comment delimiters.
     const char *string_delims;       // List of matched string (or character) literal delimiters.
     const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
     const int *string_types;         // List of token types associated with each string delimiter.
