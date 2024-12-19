@@ -364,6 +364,7 @@ const char *lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_UNCLOSED_STRING: return "Unclosed string-like literal";
     case LXL_LERR_INVALID_INTEGER: return "Inavlid integer";
     }
+    LXL_UNREACHABLE();
     return NULL;  // Unreachable.
 }
 
@@ -532,6 +533,8 @@ const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer) {
 }
 
 bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
+    if (base == 0) return false;
+    LXL_ASSERT(2 <= base && base <= 26);
     char digits[] = LXL_DIGITS "" LXL_BASIC_MIXED_LATIN_CHARS;
     int end_digit_index = (base <= 10) ? base : 10 + 2*(base - 10);
     digits[end_digit_index] = '\0';  // Truncate array to only contain the needed digits.
@@ -815,6 +818,7 @@ struct lxl_string_view lxl_sv_from_string(const char *s) {
 }
 
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) {
+    LXL_ASSERT(start <= end);
     return (struct lxl_string_view) {.start = start, .length = end - start};
 }
 
