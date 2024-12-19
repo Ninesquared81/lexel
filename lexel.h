@@ -40,6 +40,10 @@
  #define LXL_ASSERT(...) ((void)0)
 #endif
 
+// This marks a location in code as logically unreachable.
+// If the assertion fires, it suggests a bug in lexel itself.
+#define LXL_UNREACHABLE() LXL_ASSERT(0 && "Unreachable. This may be a bug in lexel.")
+
 // END META-DEFINITIONS.
 
 // LEXEL CORE.
