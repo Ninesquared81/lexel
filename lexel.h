@@ -824,7 +824,6 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) 
 
 // END STRING VIEW FUNCTIONS.
 
-#undef LEXEL_IMPLEMENTATION
 #endif  // LEXEL_IMPLEMENTATION
 
 #endif  // LEXEL_H
