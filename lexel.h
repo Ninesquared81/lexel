@@ -5,6 +5,43 @@
 #include <stddef.h>   // size_t, ptrdiff_t
 #include <limits.h>   // INT_MAX
 
+// CUSTOMISATION OPTIONS.
+
+// These options customise certain behaviours of lexel.
+// They're defined at the top of the file for visibility.
+
+// Customisable options can be given custom definitions before including lexel.h.
+
+
+// LXL_IMPLEMENTATION enables implementation of lexel functions. It should be defined at most ONCE.
+
+// LXL_NO_ASSERT disables lexel library assertions. This setting is independant of NDEBUG.
+
+
+// This option controls which macro should be used for lexel library assertions.
+// The default value is the standard assert() macro.
+// NOTE: this macro should not be customised to merely disable assertions. To do that, use LXL_NO_ASSERT.
+#ifndef LXL_ASSERT_MACRO
+ #include <assert.h>
+ #define LXL_ASSERT_MACRO assert
+#endif
+
+// END CUSTOMISATION OPTIONS.
+
+// META-DEFINITIONS.
+
+// These definitions are not part of the lexel interface per se, but have special signficance within this file.
+
+// LXL_ASSERT() is lexel's library assertion macro. It should not be directly customised.
+// Use LXL_ASSERT_MACRO and LXL_NO_ASSERT to cusomise instead.
+#ifndef LXL_NO_ASSERT
+ #define LXL_ASSERT(...) LXL_ASSERT_MACRO(__VA_ARGS__)
+#else  // Disable library assertions.
+ #define LXL_ASSERT(...) ((void)0)
+#endif
+
+// END META-DEFINITIONS.
+
 // LEXEL CORE.
 
 // These are the core definitions for lexel -- the lexer and token.
