@@ -13,6 +13,12 @@ The repo also includes the file example.c, which demonstrates the usage of the l
 
 The library is currently in its very early days so many features are missing.
 
+### (Not) Building
+
+As alluded to above, there is no build step for lexel. However, the script build.bat is included
+in the repo to automate building example.c. Note that this build script invokes gcc to build the
+program. If you have a different C compiler, feel free to edit the file.
+
 ## External and internal interfaces
 
 Lexel does not hide any details from the caller, but it separates the lexer API into two interfaces.
