@@ -223,6 +223,9 @@ bool lxl_lexer__rewind(struct lxl_lexer *lexer);
 // Rewind the lexer by up to n characters and return whether all n chracters could be rewound.
 bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
 
+// Recalculate the current column in the lexer.
+void lxl_lexer__recalc_column(struct lxl_lexer *lexer);
+
 // Return non-NULL if the current current matches any of those passed but do not consume it, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
 // null-terminated string `chars`.
@@ -462,34 +465,59 @@ bool lxl_lexer__is_at_start(struct lxl_lexer *lexer) {
 
 char lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer__is_at_end(lexer)) return '\0';
+    if (*lexer->current != '\n') {
+        ++lexer->pos.column;
+    }
+    else {
+        lexer->pos.column = 0;
+        ++lexer->pos.line;
+    }
     ++lexer->current;
     return lexer->current[-1];
 }
 
 bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n) {
-    size_t tail_length = lxl_lexer__tail_length(lexer);
-    if (tail_length < n) {
-        lexer->current = lexer->end;
-        return false;
+    while (n-- > 0) {
+        if (lxl_lexer__is_at_end(lexer)) return false;
+        ++lexer->current;
+        if (*lexer->current == '\n') {
+            ++lexer->pos.line;
+        }
     }
-    lexer->current += n;
+    lxl_lexer__recalc_column(lexer);
     return true;
 }
 
 bool lxl_lexer__rewind(struct lxl_lexer *lexer) {
     if (lxl_lexer__is_at_start(lexer)) return false;
     --lexer->current;
+    if (*lexer->current != '\n') {
+        --lexer->pos.column;
+    }
+    else {
+        lxl_lexer__recalc_column(lexer);
+        --lexer->pos.line;
+    }
     return true;
 }
 
 bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n) {
-    size_t head_length = lxl_lexer__head_length(lexer);
-    if (head_length < n) {
-        lexer->current = lexer->start;
-        return false;
+    while (n-- > 0) {
+        if (lxl_lexer__is_at_start(lexer)) return false;
+        --lexer->current;
+        if (*lexer->current == '\n') {
+            --lexer->pos.line;
+        }
     }
-    lexer->current -= n;
+    lxl_lexer__recalc_column(lexer);
     return true;
+}
+
+void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
+    lexer->pos.column = 0;
+    for (const char *p = lexer->current; p != lexer->start && *p != '\n'; --p) {
+        ++lexer->pos.column;
+    }
 }
 
 const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
