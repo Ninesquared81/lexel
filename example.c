@@ -55,7 +55,9 @@ void print_token(struct lxl_token token, int i) {
 int main(void) {
     // Example source code.
     struct lxl_lexer lexer = lxl_lexer_from_sv(
-        LXL_SV_FROM_STRLIT("println(\"Hello, World!\")  # Greet the world.\n"));
+        LXL_SV_FROM_STRLIT(
+            "println(\"Hello, World!\")  # Greet the world.\n"
+            "println(\"2 and 2 are\", 2 + 2)\n"));
     // We define how our line comments should start in this NULL-terminated list.
     // Lexel supports multiple styles of line comment which can start with any sequence of characters
     // and run to the end of the line. We're keeping things simple, though, and using a single `#` to
