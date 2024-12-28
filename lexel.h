@@ -84,7 +84,7 @@ struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
-    struct lxl_location pos;  // The current position (line, col) in the source.
+    struct lxl_location pos;  // The current position (line, column) in the source.
     const char *const *line_comment_openers;            // List of line comment openers.
     const struct delim_pair *nestable_comment_delims;   // List of paired nestable block comment delimiters.
     const struct delim_pair *unnestable_comment_delims; // List of paired unnestable block comment delimiters.
@@ -112,7 +112,7 @@ struct lxl_lexer {
 struct lxl_token {
     const char *start;        // The start of the token.
     const char *end;          // The end of the token.
-    struct lxl_location loc;  // The location (line, col) of the token in the source.
+    struct lxl_location loc;  // The location (line, column) of the token in the source.
     int token_type;           // The type of the lexical token. Negative values have special meanings.
 };
 
