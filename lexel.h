@@ -65,6 +65,14 @@ enum lxl_lex_error {
     LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
 };
 
+// Lexer status.
+enum lxl_lexer_status {
+    LXL_LSTS_READY,              // Ready to lex next token.
+    LXL_LSTS_LEXING,             // In the process of lexing a token.
+    LXL_LSTS_FINISHED,           // Reached the end of tokens.
+    LXL_LSTS_FINISHED_ABNORMAL,  // Reached the end of tokens abnormally.
+};
+
 // A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
 struct delim_pair {
     const char *opener;
@@ -90,8 +98,8 @@ struct lxl_lexer {
     const char *const *integer_suffixes;  // List of suffixes for integer literals.
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
-    enum lxl_lex_error error; // Error code set to the current lexing error.
-    bool is_finished;         // Flag which is set when the lexer emits a LXL_TOKENS_END token.
+    enum lxl_lex_error error;      // Error code set to the current lexing error.
+    enum lxl_lexer_status status;  // Current status of the lexer.
 };
 
 // A lexical token.
@@ -131,6 +139,7 @@ struct lxl_string_view {
 enum lxl__token_mvs {
     LXL_TOKENS_END = -1,
     LXL_TOKEN_UNINIT = -2,
+    LXL_TOKENS_END_ABNORMAL = -3,
     // See enum lxl_lex_error for token error types.
 };
 
@@ -153,8 +162,9 @@ enum lxl__token_mvs {
 
 // These functions are for working with tokens.
 
-// Return whether `tok` is a special TOKENS_END token.
-#define LXL_TOKEN_IS_END(tok) ((tok).token_type == LXL_TOKENS_END)
+// Return whether `tok` is a special end-of-tokens token.
+#define LXL_TOKEN_IS_END(tok) \
+    ((tok).token_type == LXL_TOKENS_END || (tok).token_type == LXL_TOKENS_END_ABNORMAL)
 
 // Return whetehr `tok` is a special error token.
 #define LXL_TOKEN_IS_ERROR(tok) ((tok).token_type <= LXL_LERR_GENERIC)
@@ -395,7 +405,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .default_int_type = LXL_LERR_GENERIC,
         .default_int_base = 0,
         .error = LXL_LERR_OK,
-        .is_finished = false,
+        .status = LXL_LSTS_READY,
     };
 }
 
@@ -435,12 +445,12 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
 }
 
 bool lxl_lexer_is_finished(struct lxl_lexer *lexer) {
-    return lexer->is_finished;
+    return lexer->status == LXL_LSTS_FINISHED || lexer->status == LXL_LSTS_FINISHED_ABNORMAL;
 }
 
 void lxl_lexer_reset(struct lxl_lexer *lexer) {
     lexer->current = lexer->start;
-    lexer->is_finished = false;
+    lexer->status = LXL_LSTS_READY;
 }
 
 ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer) {
@@ -762,6 +772,8 @@ int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct delim_pair del
 }
 
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
+    LXL_ASSERT(lexer->status == LXL_LSTS_READY);  // This should be unreachable otherwise.
+    lexer->status = LXL_LSTS_LEXING;
     return (struct lxl_token) {
         .start = lexer->current,
         .end = lexer->current,
@@ -776,12 +788,18 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
         token->token_type = lexer->error;  // Set error as token type.
         lexer->error = LXL_LERR_OK;  // Clear error.
     }
+    if (lexer->status == LXL_LSTS_LEXING) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
     struct lxl_token token = lxl_lexer__start_token(lexer);
-    token.token_type = LXL_TOKENS_END;
-    lexer->is_finished = true;
+    if (lexer->status != LXL_LSTS_FINISHED_ABNORMAL) {
+        token.token_type = LXL_TOKENS_END;
+        lexer->status = LXL_LSTS_FINISHED;
+    }
+    else {
+        token.token_type = LXL_TOKENS_END_ABNORMAL;
+    }
     return token;
 }
 
