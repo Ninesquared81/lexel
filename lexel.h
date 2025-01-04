@@ -772,8 +772,7 @@ int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct delim_pair del
 }
 
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
-    LXL_ASSERT(lexer->status == LXL_LSTS_READY);  // This should be unreachable otherwise.
-    lexer->status = LXL_LSTS_LEXING;
+    if (lexer->status == LXL_LSTS_READY) lexer->status = LXL_LSTS_LEXING;
     return (struct lxl_token) {
         .start = lexer->current,
         .end = lexer->current,
