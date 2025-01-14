@@ -73,6 +73,11 @@ enum lxl_lexer_status {
     LXL_LSTS_FINISHED_ABNORMAL,  // Reached the end of tokens abnormally.
 };
 
+enum lxl_word_lexing_rule {
+    LXL_LEX_SYMBOLIC,  // Lex all symbolic characters (any non-whitespace).
+    LXL_LEX_WORD,      // Lex only word characters (any non-reserved symbolic).
+};
+
 // A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
 struct delim_pair {
     const char *opener;
@@ -99,7 +104,8 @@ struct lxl_lexer {
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
     const char *const *puncts;  // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
-    int *punct_types;           // List of token ypes corresponding to each punctuation token above.
+    int *punct_types;           // List of token types corresponding to each punctuation token above.
+    enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
 };
@@ -249,8 +255,16 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s);
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
 // Return whether the current character is whitespace (see LXL_WHITESPACE_CHARS).
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
+// Return whether the current characer is reserved (has a special meaning, like starting a comment or string).
+bool lxl_lexer__check_reserved(struct lxl_lexer *lexer);
 // Return whether the current character is a line comment opener.
 bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a block comment.
+bool lxl_lexer__check_block_comment(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a nestable block comment.
+bool lxl_lexer__check_nestable_comment(struct lxl_lexer *lexer);
+// Return whether the next charactrs comprise an unnestable block comment.
+bool lxl_lexer__check_unnestable_comment(struct lxl_lexer *lexer);
 // Return non-NULL if the current character matches one of the lexer's string delimiters but do not consume
 // it, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
 const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
@@ -334,6 +348,8 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer);
 
 // Consume all non-whitespace characters and return the number consumed.
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
+// Consume a word token (non-reserved symbolic) and return the number of characters read.
+int lxl_lexer__lex_word(struct lxl_lexer *lexer);
 // Consume a string-like token delimited by `delim` and return the number of characters read.
 int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim);
 // Consume the digits of an integer literal in the given base (2--36).
@@ -412,6 +428,9 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .integer_suffixes = NULL,
         .default_int_type = LXL_LERR_GENERIC,
         .default_int_base = 0,
+        .puncts = NULL,
+        .punct_types = NULL,
+        .word_lexing_rule = LXL_LEX_SYMBOLIC,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
     };
@@ -452,7 +471,14 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         token.token_type = lexer->punct_types[punct_index];
     }
     else {
-        lxl_lexer__lex_symbolic(lexer);
+        switch (lexer->word_lexing_rule) {
+        case LXL_LEX_SYMBOLIC:
+            lxl_lexer__lex_symbolic(lexer);
+            break;
+        case LXL_LEX_WORD:
+            lxl_lexer__lex_word(lexer);
+            break;
+        }
     }
     lxl_lexer__finish_token(lexer, &token);
     return token;
@@ -569,12 +595,45 @@ bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
     return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
 }
 
+bool lxl_lexer__check_reserved(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_whitespace(lexer)
+        || lxl_lexer__check_line_comment(lexer)
+        || lxl_lexer__check_block_comment(lexer)
+        || !!lxl_lexer__check_string_delim(lexer)
+        || !!lxl_lexer__check_punct(lexer)
+        ;
+}
+
 bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
     if (lexer->line_comment_openers == NULL) return false;
     for (const char *const *opener = lexer->line_comment_openers; *opener != NULL; ++opener) {
         if (lxl_lexer__check_string(lexer, *opener)) {
             return true;
         }
+    }
+    return false;
+}
+
+bool lxl_lexer__check_block_comment(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_nestable_comment(lexer) || lxl_lexer__check_unnestable_comment(lexer);
+}
+
+bool lxl_lexer__check_nestable_comment(struct lxl_lexer *lexer) {
+    if (lexer->nestable_comment_delims == NULL) return false;
+    for (const struct delim_pair *delims = lexer->nestable_comment_delims;
+         delims->opener != NULL;
+         ++delims) {
+        if (lxl_lexer__check_string(lexer, delims->opener)) return true;
+    }
+    return false;
+}
+
+bool lxl_lexer__check_unnestable_comment(struct lxl_lexer *lexer) {
+    if (lexer->unnestable_comment_delims == NULL) return false;
+    for (const struct delim_pair *delims = lexer->unnestable_comment_delims;
+         delims->opener != NULL;
+         ++delims) {
+        if (lxl_lexer__check_string(lexer, delims->opener)) return true;
     }
     return false;
 }
@@ -842,6 +901,15 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer) {
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
     int count = 0;
     while (!lxl_lexer__is_at_end(lexer) && !lxl_lexer__check_whitespace(lexer)) {
+        lxl_lexer__advance(lexer);
+        ++count;
+    }
+    return count;
+}
+
+int lxl_lexer__lex_word(struct lxl_lexer *lexer) {
+    int count = 0;
+    while (!lxl_lexer__is_at_end(lexer) && !lxl_lexer__check_reserved(lexer)) {
         lxl_lexer__advance(lexer);
         ++count;
     }
