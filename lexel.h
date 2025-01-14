@@ -212,6 +212,10 @@ bool lxl_lexer_is_finished(struct lxl_lexer *lexer);
 // Reset the lexer to the start of its input.
 void lxl_lexer_reset(struct lxl_lexer *lexer);
 
+// Construct a zero-terminated array to use for setting lexer fields calling for lists.
+// Requires at least one element.
+#define LXL_LIST(type, ...) ((type[]) {__VA_ARGS__, 0})
+
 // END LEXER EXTERNAL INTERFACE.
 
 
