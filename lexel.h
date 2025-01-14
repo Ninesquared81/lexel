@@ -216,6 +216,12 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 // Requires at least one element.
 #define LXL_LIST(type, ...) ((type[]) {__VA_ARGS__, 0})
 
+// Construct a NULL-terminated list of strings.
+#define LXL_LIST_STR(...) LXL_LIST(const char *, __VA_ARGS__)
+
+// COnstruct a {0}-terminated list of delimiter pairs.
+#define LXL_LIST_DELIMS(...) LXL_LIST(struct delim_pair, __VA_ARGS__)
+
 // END LEXER EXTERNAL INTERFACE.
 
 
