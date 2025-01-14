@@ -467,6 +467,7 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     if ((matched_char = lxl_lexer__match_string_delim(lexer))) {
         lxl_lexer__lex_string(lexer, *matched_char);
         int delim_index = matched_char - lexer->string_delims;
+        LXL_ASSERT(lexer->string_types != NULL);
         token.token_type = lexer->string_types[delim_index];
     }
     else if ((int_base = lxl_lexer__match_int_prefix(lexer))) {
@@ -677,6 +678,7 @@ int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer) {
     // We'll rewind the lexer before returning.
     lxl_lexer__match_number_sign(lexer);
     if (lexer->integer_prefixes != NULL) {
+        LXL_ASSERT(lexer->integer_bases != NULL);
         for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
             if (lxl_lexer__check_string(lexer, lexer->integer_prefixes[i])) {
                 lexer->current = start;
@@ -787,6 +789,7 @@ bool lxl_lexer__match_digit_or_separator(struct lxl_lexer *lexer, int base) {
 int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer) {
     lxl_lexer__match_number_sign(lexer);
     if (lexer->integer_prefixes != NULL) {
+        LXL_ASSERT(lexer->integer_bases != NULL);
         for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
             if (lxl_lexer__match_string(lexer, lexer->integer_prefixes[i])) {
                 return lexer->integer_bases[i];
