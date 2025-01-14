@@ -84,6 +84,12 @@ int main(void) {
     // and run to the end of the line. We're keeping things simple, though, and using a single `#` to
     // start our line comments.
     lexer.line_comment_openers = (const char *[]) {"#", NULL};
+    // NOTE: we can also use the macro LXL_LIST_STR() to automate this process:
+    // lexer.line_comment_openers = LXL_LIST_STR("#");
+    // The macro takes care of both the type (const char *) and appending NULL.
+    // For the the sake of demonstration, we did it manually the first time, but we'll use
+    // the macro approach in the future.
+
     // If we wanted to, we could also define a style for multiline comments. For now, though, we'll
     // stick to line comments only.
 
@@ -124,7 +130,7 @@ int main(void) {
     // mitigate the issue for now.
     // Okay, let's do just that. We can use the .puncts member of the lexer to define a list of punctuation
     // token values:
-    lexer.puncts = (const char *[]) {"+", ",", "(", ")", "{", "}", NULL};
+    lexer.puncts = LXL_LIST_STR("+", ",", "(", ")", "{", "}");
     // And each has a corresponding type:
     lexer.punct_types = (int[]) {
         TOKEN_PLUS,
@@ -151,7 +157,7 @@ int main(void) {
     // okay, but, as ever, lexel has more to offer: keywords. Keywords are just word tokens except they can
     // have their own unique token types.
     // Perhaps expectedly at this point, keywords are defined by two lists:
-    lexer.keywords = (const char *[]) {"def", NULL};
+    lexer.keywords = LXL_LIST_STR("def");
     lexer.keyword_types = (int[]) {TOKEN_DEF};
     lxl_lexer_reset(&lexer);
     print_tokens(&lexer);
