@@ -98,6 +98,8 @@ struct lxl_lexer {
     const char *const *integer_suffixes;  // List of suffixes for integer literals.
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
+    const char *const *puncts;  // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
+    int *punct_types;           // List of token ypes corresponding to each punctuation token above.
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
 };
@@ -267,6 +269,9 @@ int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer);
 bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise a number literal sign (e.g. +, -) but do not consume them.
 bool lxl_lexer__check_number_sign(struct lxl_lexer *lexer);
+// Return non-NULL if the next characters comprise an punct but do not consume them, otherwise,
+// return NULL. On success, the return value is the pointer to the matching punct in the .puncts list.
+const char *const *lxl_lexer__check_punct(struct lxl_lexer *lexer);
 
 // Return non-NULL if the current current matches any of those passed and consume it if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -303,6 +308,9 @@ int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer);
 bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise a number literal sign (e.g. +, -), and consume them if so.
 bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer);
+// Return non-NULL if the next characters comprise an punct and consume them if so, otherwise,
+// return NULL. On success, the return value is the pointer to the matching punct in the .puncts list.
+const char *const *lxl_lexer__match_punct(struct lxl_lexer *lexer);
 
 // Advance the lexer past any whitespace characters and return the number of characters consumed.
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
@@ -425,17 +433,23 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         return lxl_lexer__create_end_token(lexer);
     }
     struct lxl_token token = lxl_lexer__start_token(lexer);
-    const char *string_delim = NULL;
+    const char *matched_char = NULL;
+    const char *const *matched_string = NULL;
     int int_base = 0;
-    if ((string_delim = lxl_lexer__match_string_delim(lexer))) {
-        lxl_lexer__lex_string(lexer, *string_delim);
-        int delim_index = string_delim - lexer->string_delims;
+    if ((matched_char = lxl_lexer__match_string_delim(lexer))) {
+        lxl_lexer__lex_string(lexer, *matched_char);
+        int delim_index = matched_char - lexer->string_delims;
         token.token_type = lexer->string_types[delim_index];
     }
     else if ((int_base = lxl_lexer__match_int_prefix(lexer))) {
         int digit_count = lxl_lexer__lex_integer(lexer, int_base);
         token.token_type = (digit_count > 0) ? lexer->default_int_type : LXL_LERR_INVALID_INTEGER;
         lxl_lexer__match_int_suffix(lexer);
+    }
+    else if ((matched_string = lxl_lexer__match_punct(lexer))) {
+        int punct_index = matched_string - lexer->puncts;
+        LXL_ASSERT(lexer->punct_types != NULL);
+        token.token_type = lexer->punct_types[punct_index];
     }
     else {
         lxl_lexer__lex_symbolic(lexer);
@@ -613,6 +627,14 @@ bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer) {
     return false;
 }
 
+const char *const *lxl_lexer__check_punct(struct lxl_lexer *lexer) {
+    if (lexer->puncts == NULL) return NULL;
+    for (const char *const *punct = lexer->puncts; *punct != NULL; ++punct) {
+        if (lxl_lexer__check_string(lexer, *punct)) return punct;
+    }
+    return NULL;
+}
+
 const char *lxl_lexer__match_chars(struct lxl_lexer *lexer, const char *chars) {
     const char *p = lxl_lexer__check_chars(lexer, chars);
     if (p != NULL) {
@@ -719,6 +741,14 @@ bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer) {
         if (lxl_lexer__match_string(lexer, lexer->integer_suffixes[i])) return true;
     }
     return false;
+}
+
+const char *const *lxl_lexer__match_punct(struct lxl_lexer *lexer) {
+    if (lexer->puncts == NULL) return NULL;
+    for (const char *const *punct = lexer->puncts; *punct != NULL; ++punct) {
+        if (lxl_lexer__match_string(lexer, *punct)) return punct;
+    }
+    return NULL;
 }
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
