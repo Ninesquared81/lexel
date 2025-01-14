@@ -41,6 +41,7 @@ enum token_type {
     TOKEN_RPAREN,
     TOKEN_LBRACE,
     TOKEN_RBRACE,
+    TOKEN_DEF,
 };
 
 // This is a helper function to print a token with its value and type.
@@ -73,8 +74,11 @@ int main(void) {
     // Example source code.
     struct lxl_lexer lexer = lxl_lexer_from_sv(
         LXL_SV_FROM_STRLIT(
-            "println(\"Hello, World!\")  # Greet the world.\n"
-            "println(\"2 and 2 are\", 2 + 2)\n"));
+            "def hello() {\n"
+            "    println(\"Hello, World!\")  # Greet the world.\n"
+            "    println(\"2 and 2 are\", 2 + 2)\n"
+            "}\n"
+            ));
     // We define how our line comments should start in this NULL-terminated list.
     // Lexel supports multiple styles of line comment which can start with any sequence of characters
     // and run to the end of the line. We're keeping things simple, though, and using a single `#` to
@@ -110,8 +114,9 @@ int main(void) {
     // If we want to restart the token stream, we can call the following function:
     lxl_lexer_reset(&lexer);
     // If we look again at our output, we'll notice something odd.
-    // For a start, the first token, which ought to be just 'println', has absorbed the first half of
-    // the string.
+    // For a start, the second token, which ought to just be 'hello' is in fact 'hello()'. It
+    // has eaten the brackets. What's more, we have the frankly absurd token 'println("Hello,'. The
+    // first part of the string (up to the first space) has been absorbed into the token.
     // This is partly becuase lexel doesn't know about '(' yet. It's also partly because lexel falls
     // back to "symbolic" tokens by default, which consist of any non-whitespace characters, including
     // string delimiters. If '"' were at the beginning of a token, everything would be fine, but because
@@ -119,12 +124,18 @@ int main(void) {
     // mitigate the issue for now.
     // Okay, let's do just that. We can use the .puncts member of the lexer to define a list of punctuation
     // token values:
-    lexer.puncts = (const char *[]) {"+", ",", "(", ")", NULL};
+    lexer.puncts = (const char *[]) {"+", ",", "(", ")", "{", "}", NULL};
     // And each has a corresponding type:
-    lexer.punct_types = (int[]) {TOKEN_PLUS, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN};
+    lexer.punct_types = (int[]) {
+        TOKEN_PLUS,
+        TOKEN_COMMA,
+        TOKEN_LPAREN, TOKEN_RPAREN,
+        TOKEN_LBRACE, TOKEN_RBRACE,
+    };
     // Let's try lexing again!
     print_tokens(&lexer);
-    // Okay, we now correctly lex the '+' and ')', but the symbolic fall-back is still getting in our way.
+    // Okay, we now correctly lex the '{', '+', ')', and '}', but the symbolic fall-back is still
+    // getting in our way.
     // The fix is simple: we change the default word lexing stategy from "SYMBOLIC" to "WORD":
     lexer.word_lexing_rule = LXL_LEX_WORD;
     lxl_lexer_reset(&lexer);
@@ -135,5 +146,15 @@ int main(void) {
     lxl_lexer_reset(&lexer);
     print_tokens(&lexer);
     // Nice!
+    // We still have one small problem with our lexer.
+    // It can correctly recognise words, but it treats 'def' no differently from 'pritnln'. That might be
+    // okay, but, as ever, lexel has more to offer: keywords. Keywords are just word tokens except they can
+    // have their own unique token types.
+    // Perhaps expectedly at this point, keywords are defined by two lists:
+    lexer.keywords = (const char *[]) {"def", NULL};
+    lexer.keyword_types = (int[]) {TOKEN_DEF};
+    lxl_lexer_reset(&lexer);
+    print_tokens(&lexer);
+    // Lovely!
     return 0;
 }
