@@ -54,7 +54,7 @@ void print_token(struct lxl_token token, int i) {
     }
 }
 
-// This is a heler function to print all the tokens in a lexer.
+// This is a helper function to print all the tokens in a lexer.
 void print_tokens(struct lxl_lexer *lexer) {
     // This loop will iterate through the token stream once.
     for (int i = 0; !lxl_lexer_is_finished(lexer); ++i) {
