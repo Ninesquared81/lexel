@@ -125,5 +125,15 @@ int main(void) {
     // Let's try lexing again!
     print_tokens(&lexer);
     // Okay, we now correctly lex the '+' and ')', but the symbolic fall-back is still getting in our way.
+    // The fix is simple: we change the default word lexing stategy from "SYMBOLIC" to "WORD":
+    lexer.word_lexing_rule = LXL_LEX_WORD;
+    lxl_lexer_reset(&lexer);
+    print_tokens(&lexer);
+    // Cool, but notice that the token type for 'println' is -2 (LXL_TOKEN_UNINIT). We want it to be an
+    // identifier. We can set the .default_word_type member for this.
+    lexer.default_word_type = TOKEN_ID;
+    lxl_lexer_reset(&lexer);
+    print_tokens(&lexer);
+    // Nice!
     return 0;
 }
