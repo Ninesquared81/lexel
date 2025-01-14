@@ -103,9 +103,11 @@ struct lxl_lexer {
     const char *const *integer_suffixes;  // List of suffixes for integer literals.
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
-    const char *const *puncts;  // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
-    int *punct_types;           // List of token types corresponding to each punctuation token above.
-    int default_word_type;
+    const char *const *puncts;   // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
+    int *punct_types;            // List of token types corresponding to each punctuation token above.
+    const char *const *keywords; // List of keywords (word tokens with unique types).
+    int *keyword_types;          // List of token types corresponding to each keyword.
+    int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
@@ -356,6 +358,9 @@ int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim);
 // Consume the digits of an integer literal in the given base (2--36).
 int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base);
 
+// Get the token type corresponding to the word specified.
+int lxl_lexer__get_word_type(struct lxl_lexer *lexer, const char *word_start);
+
 // END LEXER INTERNAL INTERFACE.
 
 
@@ -431,6 +436,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .default_int_base = 0,
         .puncts = NULL,
         .punct_types = NULL,
+        .keywords = NULL,
+        .keyword_types = NULL,
         .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
         .error = LXL_LERR_OK,
@@ -481,7 +488,7 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
             lxl_lexer__lex_word(lexer);
             break;
         }
-        token.token_type = lexer->default_word_type;
+        token.token_type = lxl_lexer__get_word_type(lexer, token.start);
     }
     lxl_lexer__finish_token(lexer, &token);
     return token;
@@ -953,6 +960,22 @@ int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
         lexer->current = start;
     }
     return lxl_lexer__length_from(lexer, start);
+}
+
+int lxl_lexer__get_word_type(struct lxl_lexer *lexer, const char *word_start) {
+    if (lexer->keywords == NULL) return lexer->default_word_type;
+    LXL_ASSERT(lexer->keyword_types != NULL);
+    ptrdiff_t word_length = lxl_lexer__length_from(lexer, word_start);
+    LXL_ASSERT(word_length > 0);  // Length = 0 is invalid.
+    for (int i = 0; lexer->keywords[i] != NULL; ++i) {
+        const char *keyword = lexer->keywords[i];
+        size_t keyword_length = strlen(keyword);
+        if (keyword_length != (size_t)word_length) continue;  // No match.
+        if (memcmp(word_start, keyword, keyword_length) == 0) {
+            return lexer->keyword_types[i];
+        }
+    }
+    return lexer->default_word_type;
 }
 
 // END LEXER FUNCTIONS.
