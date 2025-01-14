@@ -36,6 +36,7 @@ enum token_type {
     TOKEN_MINUS,
     TOKEN_STAR,
     TOKEN_SLASH,
+    TOKEN_COMMA,
     TOKEN_LPAREN,
     TOKEN_RPAREN,
     TOKEN_LBRACE,
@@ -49,6 +50,22 @@ void print_token(struct lxl_token token, int i) {
     // In the case of an error token, we also print the associated error message.
     if (LXL_TOKEN_IS_ERROR(token)) {
         printf("Error: %s.\n", lxl_error_message(token.token_type));
+    }
+}
+
+// This is a heler function to print all the tokens in a lexer.
+void print_tokens(struct lxl_lexer *lexer) {
+    // This loop will iterate through the token stream once.
+    for (int i = 0; !lxl_lexer_is_finished(lexer); ++i) {
+        // This function is the heart of the lexer. We call it to get the next token in the stream.
+        // The lexer uses the rules defined above the decide the type and length of the token.
+        // The lexer may return a token with a negative type to communicate some message to the caller.
+        // For instance, if there was an error during lexing, an error token is retured whose type is
+        // set to the corresponding error code and whose value is the token being considered up to the
+        // point the error ocurred.
+        struct lxl_token token = lxl_lexer_next_token(lexer);
+        print_token(token, i);
+        // We keep looping until we exhaust the token stream.
     }
 }
 
@@ -82,18 +99,9 @@ int main(void) {
     // type. We only have one delimiter, though, so that point is somewhat moot. It is important to know,
     // however, that this array must be the same length as the `.string_delims` string.
     lexer.string_types = (int[]) {TOKEN_STRING};
-    // This loop will iterate through the token stream once.
-    for (int i = 0; !lxl_lexer_is_finished(&lexer); ++i) {
-        // This function is the heart of the lexer. We call it to get the next token in the stream.
-        // The lexer uses the rules defined above the decide the type and length of the token.
-        // The lexer may return a token with a negative type to communicate some message to the caller.
-        // For instance, if there was an error during lexing, an error token is retured whose type is
-        // set to the corresponding error code and whose value is the token being considered up to the
-        // point the error ocurred.
-        struct lxl_token token = lxl_lexer_next_token(&lexer);
-        print_token(token, i);
-        // We keep looping until we exhaust the token stream.
-    }
+    // Let's give it a try!
+    // See print_tokens() above for the definition of this function.
+    print_tokens(&lexer);
     // At the end of the token stream, the lexer emits a special "end of tokens" type token. This sentinal
     // token is emitted upon first reaching the end of the stream and on all subsequent calls to
     // `lxl_lexer__next_token()`. To demonstrate:
@@ -101,5 +109,21 @@ int main(void) {
     print_token(lxl_lexer_next_token(&lexer), -1);
     // If we want to restart the token stream, we can call the following function:
     lxl_lexer_reset(&lexer);
+    // If we look again at our output, we'll notice something odd.
+    // For a start, the first token, which ought to be just 'println', has absorbed the first half of
+    // the string.
+    // This is partly becuase lexel doesn't know about '(' yet. It's also partly because lexel falls
+    // back to "symbolic" tokens by default, which consist of any non-whitespace characters, including
+    // string delimiters. If '"' were at the beginning of a token, everything would be fine, but because
+    // it is found after '(', it is absorbed into the token. As long as lexel lexes '(' properly, we can
+    // mitigate the issue for now.
+    // Okay, let's do just that. We can use the .puncts member of the lexer to define a list of punctuation
+    // token values:
+    lexer.puncts = (const char *[]) {"+", ",", "(", ")", NULL};
+    // And each has a corresponding type:
+    lexer.punct_types = (int[]) {TOKEN_PLUS, TOKEN_COMMA, TOKEN_LPAREN, TOKEN_RPAREN};
+    // Let's try lexing again!
+    print_tokens(&lexer);
+    // Okay, we now correctly lex the '+' and ')', but the symbolic fall-back is still getting in our way.
     return 0;
 }
