@@ -587,7 +587,7 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
 
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
     size_t tail_length = lxl_lexer__tail_length(lexer);
-    if (n < tail_length) n = tail_length;
+    if (n > tail_length) n = tail_length;
     return strncmp(lexer->current, s, n) == 0;
 }
 
