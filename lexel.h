@@ -105,6 +105,7 @@ struct lxl_lexer {
     int default_int_base;     // Default base for (unprefixed) integer literals.
     const char *const *puncts;  // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
     int *punct_types;           // List of token types corresponding to each punctuation token above.
+    int default_word_type;
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
@@ -430,6 +431,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .default_int_base = 0,
         .puncts = NULL,
         .punct_types = NULL,
+        .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
@@ -479,6 +481,7 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
             lxl_lexer__lex_word(lexer);
             break;
         }
+        token.token_type = lexer->default_word_type;
     }
     lxl_lexer__finish_token(lexer, &token);
     return token;
