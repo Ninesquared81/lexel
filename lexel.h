@@ -118,6 +118,7 @@ struct lxl_lexer {
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     int previous_token_type;       // The type of the most recently lexed token.
+    int line_ending_type;          // The type to use for line ending tokens (default: LXL_TOKEN_LINE_ENDING).
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
     bool emit_line_endings;     // Should line endings have their own tokens? (default: false)
@@ -474,6 +475,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
         .previous_token_type = LXL_TOKEN_NO_TOKEN,
+        .line_ending_type = LXL_TOKEN_LINE_ENDING,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
         .emit_line_endings = false,
@@ -503,7 +505,7 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     if (lxl_lexer__match_chars(lexer, "\n")) {
         // If we cannot emit line endings, we should have already skipped this LF.
         LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
-        token.token_type = LXL_TOKEN_LINE_ENDING;
+        token.token_type = lexer->line_ending_type;
     }
     else if ((matched_lxl_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_LINE))) {
         lxl_lexer__lex_string(lexer, matched_lxl_delim_pair->closer, LXL_STRING_LINE);
