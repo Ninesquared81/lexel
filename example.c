@@ -100,7 +100,7 @@ int main(void) {
     // this field to "turn on" integer lexing.
     lexer.default_int_base = 10;
     // Strings are next. For now, we'll use double-quotes only to delimit strings.
-    lexer.string_delims = "\"";
+    lexer.line_string_delims = LXL_LIST_DELIMS({"\"", "\""});
     // We'll allow `\` in string literals to start an escape sequence. Processing these sequences is left
     // up to the parser. The lexer doesn't even verify if the sequence is long enough. It will, however,
     // ignore a closing delimiter if preceeded by an escape character.

@@ -78,10 +78,17 @@ enum lxl_word_lexing_rule {
     LXL_LEX_WORD,      // Lex only word characters (any non-reserved symbolic).
 };
 
-// A pair of delimiters for block comments, e.g. "/*" and "*/" for C-style comments.
+// A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
 struct delim_pair {
     const char *opener;
     const char *closer;
+};
+
+// Whether a string should be lexed as single line or multiline.
+// Used as an argument of `lxl_lexer__lex_string()`
+enum lxl_string_type {
+    LXL_STRING_LINE,
+    LXL_STRING_MULTILINE,
 };
 
 // The main lexer object.
@@ -93,7 +100,8 @@ struct lxl_lexer {
     const char *const *line_comment_openers;            // List of line comment openers.
     const struct delim_pair *nestable_comment_delims;   // List of paired nestable block comment delimiters.
     const struct delim_pair *unnestable_comment_delims; // List of paired unnestable block comment delimiters.
-    const char *string_delims;       // List of matched string (or character) literal delimiters.
+    const struct delim_pair *line_string_delims;  // List of paired line string-like literal delimiters.
+    const struct delim_pair *multiline_string_delims; // List of multiline string-like literal delimiters.
     const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
     const int *string_types;         // List of token types associated with each string delimiter.
     const char *digit_separators;    // List of digit separator characters allowed in number literals.
@@ -112,8 +120,8 @@ struct lxl_lexer {
     int previous_token_type;       // The type of the most recently lexed token.
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
-    bool emit_line_endings;     // Flag determining whether line endings should have their own tokens.
-    bool collect_line_endings;  // Flag determining whether multiple line ending tokens should be combined.
+    bool emit_line_endings;     // Should line endings have their own tokens? (default: false)
+    bool collect_line_endings;  // Should consecutive line ending tokens be combined? (default: true)
 };
 
 // A lexical token.
@@ -228,8 +236,8 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 // Construct a NULL-terminated list of strings.
 #define LXL_LIST_STR(...) LXL_LIST(const char *, __VA_ARGS__)
 
-// COnstruct a {0}-terminated list of delimiter pairs.
-#define LXL_LIST_DELIMS(...) LXL_LIST(struct delim_pair, __VA_ARGS__)
+// Construct a {0}-terminated list of delimiter pairs.
+#define LXL_LIST_DELIMS(...) ((struct delim_pair[]) {__VA_ARGS__, {0}})
 
 // END LEXER EXTERNAL INTERFACE.
 
@@ -290,9 +298,10 @@ bool lxl_lexer__check_block_comment(struct lxl_lexer *lexer);
 bool lxl_lexer__check_nestable_comment(struct lxl_lexer *lexer);
 // Return whether the next charactrs comprise an unnestable block comment.
 bool lxl_lexer__check_unnestable_comment(struct lxl_lexer *lexer);
-// Return non-NULL if the current character matches one of the lexer's string delimiters but do not consume
-// it, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
-const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer);
+// Return non-NULL if the next characters comprise one of the lexer's string openers but do not consume
+// them, otherwise, return NULL. On success, the return value is the pointer to the matching opener.
+const struct delim_pair *lxl_lexer__check_string_opener(struct lxl_lexer *lexer,
+                                                        enum lxl_string_type string_type);
 // Return whether the current character is digit of the specified base but do not consume it. The base is
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
@@ -329,9 +338,10 @@ bool lxl_lexer__match_block_comment(struct lxl_lexer *lexer);
 bool lxl_lexer__match_nestable_comment(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an unnestable block comment, and consume them if so.
 bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer);
-// Return non-NULL if the current character matches one of the lexer's string delimiters and consume it
-// if so, otherwise, return NULL. On success, the return value is the pointer to the matching delimiter.
-const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer);
+// Return non-NULL if the next characters comprise one of the lexer's string delimiters and consume them
+// if so, otherwise, return NULL. On success, the return value is the pointer to the matching opener.
+const struct delim_pair *lxl_lexer__match_string_opener(struct lxl_lexer *lexer,
+                                                        enum lxl_string_type string_type);
 // Return whether the current character is digit of the specified base, and consume it if so. The base is
 // an integer in the range  2--36 (inclusive). For bases 11+, the letters a--z (case-insensitive) are
 // used for digit values 10+ (as in hexadecimal).
@@ -376,7 +386,7 @@ int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
 // Consume a word token (non-reserved symbolic) and return the number of characters read.
 int lxl_lexer__lex_word(struct lxl_lexer *lexer);
 // Consume a string-like token delimited by `delim` and return the number of characters read.
-int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim);
+int lxl_lexer__lex_string(struct lxl_lexer *lexer, const char *closer, enum lxl_string_type string_type);
 // Consume the digits of an integer literal in the given base (2--36).
 int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base);
 
@@ -447,7 +457,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .line_comment_openers = NULL,
         .nestable_comment_delims = NULL,
         .unnestable_comment_delims = NULL,
-        .string_delims = NULL,
+        .line_string_delims = NULL,
+        .multiline_string_delims = NULL,
         .string_escape_chars = NULL,
         .number_signs = NULL,
         .digit_separators = NULL,
@@ -486,17 +497,23 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         return lxl_lexer__create_end_token(lexer);
     }
     struct lxl_token token = lxl_lexer__start_token(lexer);
-    const char *matched_char = NULL;
     const char *const *matched_string = NULL;
+    const struct delim_pair *matched_delim_pair = NULL;
     int int_base = 0;
     if (lxl_lexer__match_chars(lexer, "\n")) {
         // If we cannot emit line endings, we should have already skipped this LF.
         LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
         token.token_type = LXL_TOKEN_LINE_ENDING;
     }
-    else if ((matched_char = lxl_lexer__match_string_delim(lexer))) {
-        lxl_lexer__lex_string(lexer, *matched_char);
-        int delim_index = matched_char - lexer->string_delims;
+    else if ((matched_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_LINE))) {
+        lxl_lexer__lex_string(lexer, matched_delim_pair->closer, LXL_STRING_LINE);
+        int delim_index = matched_delim_pair - lexer->line_string_delims;
+        LXL_ASSERT(lexer->string_types != NULL);
+        token.token_type = lexer->string_types[delim_index];
+    }
+    else if ((matched_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_MULTILINE))) {
+        lxl_lexer__lex_string(lexer, matched_delim_pair->closer, LXL_STRING_MULTILINE);
+        int delim_index = matched_delim_pair - lexer->multiline_string_delims;
         LXL_ASSERT(lexer->string_types != NULL);
         token.token_type = lexer->string_types[delim_index];
     }
@@ -620,6 +637,7 @@ bool lxl_lexer__can_emit_line_ending(struct lxl_lexer *lexer) {
 }
 
 const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
+    if (chars == NULL) return NULL;  // Allow NULL.
     while (*chars != '\0') {
         if (*lexer->current == *chars) return chars;
         ++chars;
@@ -628,6 +646,7 @@ const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
 }
 
 bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
+    if (s == NULL) return false;
     size_t tail_length = lxl_lexer__tail_length(lexer);
     size_t n = strlen(s);
     if (n > tail_length) return false;
@@ -635,6 +654,7 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s) {
 }
 
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
+    if (s == NULL) return false;
     size_t tail_length = lxl_lexer__tail_length(lexer);
     if (n > tail_length) n = tail_length;
     return strncmp(lexer->current, s, n) == 0;
@@ -651,7 +671,8 @@ bool lxl_lexer__check_reserved(struct lxl_lexer *lexer) {
     return lxl_lexer__check_whitespace(lexer)
         || lxl_lexer__check_line_comment(lexer)
         || lxl_lexer__check_block_comment(lexer)
-        || !!lxl_lexer__check_string_delim(lexer)
+        || !!lxl_lexer__check_string_opener(lexer, LXL_STRING_LINE)
+        || !!lxl_lexer__check_string_opener(lexer, LXL_STRING_MULTILINE)
         || !!lxl_lexer__check_punct(lexer)
         ;
 }
@@ -690,9 +711,16 @@ bool lxl_lexer__check_unnestable_comment(struct lxl_lexer *lexer) {
     return false;
 }
 
-const char *lxl_lexer__check_string_delim(struct lxl_lexer *lexer) {
-    if (lexer->string_delims == NULL) return NULL;
-    return lxl_lexer__check_chars(lexer, lexer->string_delims);
+const struct delim_pair *lxl_lexer__check_string_opener(struct lxl_lexer *lexer,
+                                                        enum lxl_string_type string_type) {
+    const struct delim_pair *string_delims = (string_type == LXL_STRING_LINE)
+        ? lexer->line_string_delims
+        : lexer->multiline_string_delims;
+    if (string_delims == NULL) return NULL;
+    for (const struct delim_pair *delims = string_delims; delims->opener != NULL; ++delims) {
+        if (lxl_lexer__check_chars(lexer, delims->opener)) return delims;
+    }
+    return NULL;
 }
 
 bool lxl_lexer__check_digit(struct lxl_lexer *lexer, int base) {
@@ -807,9 +835,16 @@ bool lxl_lexer__match_unnestable_comment(struct lxl_lexer *lexer) {
     return false;
 }
 
-const char *lxl_lexer__match_string_delim(struct lxl_lexer *lexer) {
-    if (lexer->string_delims == NULL) return NULL;
-    return lxl_lexer__match_chars(lexer, lexer->string_delims);
+const struct delim_pair *lxl_lexer__match_string_opener(struct lxl_lexer *lexer,
+                                                        enum lxl_string_type string_type) {
+    const struct delim_pair *string_delims = (string_type == LXL_STRING_LINE)
+        ? lexer->line_string_delims
+        : lexer->multiline_string_delims;
+    if (string_delims == NULL) return NULL;
+    for (const struct delim_pair *delims = string_delims; delims->opener != NULL; ++delims) {
+        if (lxl_lexer__match_chars(lexer, delims->opener)) return delims;
+    }
+    return NULL;
 }
 
 bool lxl_lexer__match_digit(struct lxl_lexer *lexer, int base) {
@@ -977,13 +1012,17 @@ int lxl_lexer__lex_word(struct lxl_lexer *lexer) {
     return count;
 }
 
-int lxl_lexer__lex_string(struct lxl_lexer *lexer, char delim) {
-    if (lexer->string_delims == NULL) return 0;  // No strings.
+int lxl_lexer__lex_string(struct lxl_lexer *lexer, const char *closer, enum lxl_string_type string_type) {
+    LXL_ASSERT(closer != NULL);
     const char *start = lexer->current;
-    while (!lxl_lexer__match_string_n(lexer, &delim, 1)) {
-        lxl_lexer__match_chars(lexer, lexer->string_escape_chars);  // Consume escape character.
-        // Consume non-delimiter character or escaped delimiter.
-        if (!lxl_lexer__advance(lexer)) {
+    while (!lxl_lexer__match_string(lexer, closer)) {
+        if (lxl_lexer__match_chars(lexer, lexer->string_escape_chars)) {
+            // Consume escaped closer.
+            lxl_lexer__match_string(lexer, closer);
+        }
+        // Consume non-delimiter character.
+        char c = lxl_lexer__advance(lexer);
+        if (c == '\0' || (c == '\n' && string_type == LXL_STRING_LINE)) {
             lexer->error = LXL_LERR_UNCLOSED_STRING;
             return lxl_lexer__length_from(lexer, start);
         }
