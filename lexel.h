@@ -109,6 +109,9 @@ struct lxl_lexer {
     int *keyword_types;          // List of token types corresponding to each keyword.
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
+    bool emit_line_endings;     // Flag determining whether line endings should have their own tokens.
+    bool collect_line_endings;  // Flag determining whether multiple line ending tokens should be combined.
+    int previous_token_type;    // The type of the most recently lexed token.
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
 };
@@ -148,14 +151,20 @@ struct lxl_string_view {
 // These enums define human-friendly names for the various magic values used by lexel.
 
 enum lxl__token_mvs {
-    LXL_TOKENS_END = -1,
-    LXL_TOKEN_UNINIT = -2,
-    LXL_TOKENS_END_ABNORMAL = -3,
+    LXL_TOKENS_END = -1,           // Special token type signifying the end of the token stream.
+    LXL_TOKEN_UNINIT = -2,         // Special token type for a token whose type is yet to be determined.
+    LXL_TOKENS_END_ABNORMAL = -3,  // Special token type signifying an abnormal end of the token stream.
+    LXL_TOKEN_LINE_ENDING = -4,    // Special token type signifying the end of a line.
+    LXL_TOKEN_NO_TOKEN = -5,       // Special token type for a non-existant token.
     // See enum lxl_lex_error for token error types.
 };
 
-// A string contining all the characters lexel considers whitespace.
-#define LXL_WHITESPACE_CHARS " \t\n\r\f\v"
+
+// A string containing all the characters lexel considers whitespace apart from line feed, which has
+// special handling in the lexer.
+#define LXL_WHITESPACE_CHARS_NO_LF " \t\r\f\v"
+// A string contining all the characters lexel considers whitespace (including line feed).
+#define LXL_WHITESPACE_CHARS LXL_WHITESPACE_CHARS_NO_LF "\n"
 
 // A string containing the basic uppercase latin alphabet in order.
 #define LXL_BASIC_UPPER_LATIN_CHARS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -256,6 +265,9 @@ bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
 
 // Recalculate the current column in the lexer.
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer);
+
+// Return whether the lexer can emit a line ending token when it sees an LF.
+bool lxl_lexer__can_emit_line_ending(struct lxl_lexer *lexer);
 
 // Return non-NULL if the current current matches any of those passed but do not consume it, otherwise,
 // return NULL. On success, the return value is the pointer to the matching character, i.e., into the
@@ -450,6 +462,9 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .keyword_types = NULL,
         .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
+        .emit_line_endings = false,
+        .collect_line_endings = true,
+        .previous_token_type = LXL_TOKEN_NO_TOKEN,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
     };
@@ -474,7 +489,12 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     const char *matched_char = NULL;
     const char *const *matched_string = NULL;
     int int_base = 0;
-    if ((matched_char = lxl_lexer__match_string_delim(lexer))) {
+    if (lxl_lexer__match_chars(lexer, "\n")) {
+        // If we cannot emit line endings, we should have already skipped this LF.
+        LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
+        token.token_type = LXL_TOKEN_LINE_ENDING;
+    }
+    else if ((matched_char = lxl_lexer__match_string_delim(lexer))) {
         lxl_lexer__lex_string(lexer, *matched_char);
         int delim_index = matched_char - lexer->string_delims;
         LXL_ASSERT(lexer->string_types != NULL);
@@ -591,6 +611,14 @@ void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
     }
 }
 
+bool lxl_lexer__can_emit_line_ending(struct lxl_lexer *lexer) {
+    if (!lexer->emit_line_endings) return false;
+    if (lexer->previous_token_type == LXL_TOKEN_LINE_ENDING) {
+        return !lexer->collect_line_endings;
+    }
+    return true;
+}
+
 const char *lxl_lexer__check_chars(struct lxl_lexer *lexer, const char *chars) {
     while (*chars != '\0') {
         if (*lexer->current == *chars) return chars;
@@ -613,7 +641,10 @@ bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
 }
 
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
-    return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
+    if (!lxl_lexer__can_emit_line_ending(lexer)) {
+        return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
+    }
+    return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS_NO_LF);
 }
 
 bool lxl_lexer__check_reserved(struct lxl_lexer *lexer) {
@@ -840,6 +871,11 @@ int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
             // Whitespace, skip.
             if (!lxl_lexer__advance(lexer)) break;
         }
+        else if (lxl_lexer__check_string(lexer, "\n")) {
+            // LF should have already been considered whitespace if we cannot emit a line ending here.
+            LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
+            break;
+        }
         else if (lxl_lexer__match_line_comment(lexer)) {
             /* Do nothing; comment already consumed. */
         }
@@ -899,6 +935,7 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
         token->token_type = lexer->error;  // Set error as token type.
         lexer->error = LXL_LERR_OK;  // Clear error.
     }
+    lexer->previous_token_type = token->token_type;
     if (lexer->status == LXL_LSTS_LEXING) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
 }
 
@@ -911,6 +948,7 @@ struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
     else {
         token.token_type = LXL_TOKENS_END_ABNORMAL;
     }
+    lxl_lexer__finish_token(lexer, &token);
     return token;
 }
 
