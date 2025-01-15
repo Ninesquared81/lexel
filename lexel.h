@@ -892,8 +892,8 @@ int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
 
 int lxl_lexer__skip_line(struct lxl_lexer *lexer) {
     const char *line_start = lexer->current;
-    // NOTE: Use `match()` to consume the final `\n` along with the comment.
-    while (!lxl_lexer__match_chars(lexer, "\n")) {
+    // NOTE: final LF is NOT consumed.
+    while (!lxl_lexer__check_chars(lexer, "\n")) {
         if (!lxl_lexer__advance(lexer)) break;
     }
     return lxl_lexer__length_from(lexer, line_start);
