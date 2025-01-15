@@ -109,11 +109,11 @@ struct lxl_lexer {
     int *keyword_types;          // List of token types corresponding to each keyword.
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
-    bool emit_line_endings;     // Flag determining whether line endings should have their own tokens.
-    bool collect_line_endings;  // Flag determining whether multiple line ending tokens should be combined.
-    int previous_token_type;    // The type of the most recently lexed token.
+    int previous_token_type;       // The type of the most recently lexed token.
     enum lxl_lex_error error;      // Error code set to the current lexing error.
     enum lxl_lexer_status status;  // Current status of the lexer.
+    bool emit_line_endings;     // Flag determining whether line endings should have their own tokens.
+    bool collect_line_endings;  // Flag determining whether multiple line ending tokens should be combined.
 };
 
 // A lexical token.
@@ -462,11 +462,11 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .keyword_types = NULL,
         .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
-        .emit_line_endings = false,
-        .collect_line_endings = true,
         .previous_token_type = LXL_TOKEN_NO_TOKEN,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
+        .emit_line_endings = false,
+        .collect_line_endings = true,
     };
 }
 
