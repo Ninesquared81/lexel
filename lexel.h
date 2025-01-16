@@ -304,8 +304,10 @@ bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n);
 // Rewind the lexer to the previous character and return whether the rewind was successful (the lexer
 // cannot be rewound beyond its starting point).
 bool lxl_lexer__rewind(struct lxl_lexer *lexer);
-// Rewind the lexer by up to n characters and return whether all n chracters could be rewound.
+// Rewind the lexer by up to n characters and return whether all n characters could be rewound.
 bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
+// Rewind the lexer to a previous point in its input and return whether all characters could be rewound.
+bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev);
 
 // Recalculate the current column in the lexer.
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer);
@@ -662,6 +664,12 @@ bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n) {
     }
     lxl_lexer__recalc_column(lexer);
     return true;
+}
+
+bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev) {
+    ptrdiff_t length = lxl_lexer__length_from(lexer, prev);
+    LXL_ASSERT(length >= 0);
+    return lxl_lexer__rewind_by(length);
 }
 
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
