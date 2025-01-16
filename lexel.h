@@ -98,6 +98,7 @@ enum lxl_lex_error {
     LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
     LXL_LERR_UNCLOSED_STRING = -19,   // A string-like literal had no closing delimiter before the end.
     LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
+    LXL_LERR_INVALID_FLOAT = -21,     // A floating-point literal was invalid.
 };
 
 // Lexer status.
@@ -146,6 +147,15 @@ struct lxl_lexer {
     const char *const *integer_suffixes;  // List of suffixes for integer literals.
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
+    const char *const *float_prefixes;   // List of prefixes for floating-point literals.
+    int *float_bases;                    // List of bases associated with each float prefix.
+    const char *const *exponent_markers; // List of exponent markers (e.g. "e") for each float prefix.
+    const char *const *exponent_signs;   // List of signs allowed in float exponents (default: ["+", "-"]).
+    const char *const *radix_separators; // List of radix separators for float literals (default: ["."]).
+    const char *const *float_suffixes;   // List of suffixes for float literals.
+    int default_float_type;  // Default token type for float literals.
+    int default_float_base;  // Default base for (unprefixed) float literals.
+    const char *default_exponent_marker; // Default exponent marker for float literals (default: "e").
     const char *const *puncts;   // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
     int *punct_types;            // List of token types corresponding to each punctuation token above.
     const char *const *keywords; // List of keywords (word tokens with unique types).
@@ -290,6 +300,8 @@ ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer);
 ptrdiff_t lxl_lexer__tail_length(struct lxl_lexer *lexer);
 // Return the number of characters consumed after `start_point`.
 ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_point);
+// Return the number of characters between now and `end_point`.
+ptrdiff_t lxl_lexer__length_to(struct lxl_lexer *lexer, const char *end_point);
 
 // Return whether the lexer is at the end of its input.
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer);
@@ -301,6 +313,8 @@ char lxl_lexer__advance(struct lxl_lexer *lexer);
 // (this will be false when there are fewer than n characters left, in which case, the lexer
 // reaches the end and stops).
 bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n);
+// Advance the lexer to a future point in its input.
+bool lxl_lexer__advance_to(struct lxl_lexer *lexer, const char *future);
 // Rewind the lexer to the previous character and return whether the rewind was successful (the lexer
 // cannot be rewound beyond its starting point).
 bool lxl_lexer__rewind(struct lxl_lexer *lexer);
@@ -324,6 +338,8 @@ bool lxl_lexer__check_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
 // but do not consume them.
 bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
+// Return whether the next characters match one of the strings passed, but do not consume the string.
+bool lxl_lexer__check_strings(struct lxl_lexer *lexer, const char *const *strings);
 // Return whether the current character is whitespace (see LXL_WHITESPACE_CHARS).
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer);
 // Return whether the current characer is reserved (has a special meaning, like starting a comment or string).
@@ -353,8 +369,18 @@ bool lxl_lexer__check_digit_or_separator(struct lxl_lexer *lexer, int base);
 int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an integer literal suffix but do not consume them.
 bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer);
-// Return whether the next characters comprise a number literal sign (e.g. +, -) but do not consume them.
+// Return non-zero if the next characters comprise a float literal prefix but do not consume them. The
+// return value is the base corresponding to the matched prefix and OUT_exponent_marker is written
+// with the corresponding exponent marker.
+int lxl_lexer__check_float_prefix(struct lxl_lexer *lexer, const char **OUT_exponent_marker);
+// Return whether the next characters comprise a float literal suffix but do not consume them.
+bool lxl_lexer__check_float_suffix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a number literal sign (e.g. "+", "-") but do not consume them.
 bool lxl_lexer__check_number_sign(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a float radix separator (e.g. ".") but do not consume them.
+bool lxl_lexer__check_radix_separator(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a float exponent sign (e.g. "+", "-") but do not consume them.
+bool lxl_lexer__check_exponent_sign(struct lxl_lexer *lexer);
 // Return non-NULL if the next characters comprise an punct but do not consume them, otherwise,
 // return NULL. On success, the return value is the pointer to the matching punct in the .puncts list.
 const char *const *lxl_lexer__check_punct(struct lxl_lexer *lexer);
@@ -368,6 +394,8 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s);
 // Return whether the next n characters match the first n characters of the string passed,
 // and consume them if so.
 bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n);
+// Return whether the next characters match one of the strings passed, and consume the string if so.
+bool lxl_lexer__match_strings(struct lxl_lexer *lexer, const char *const *strings);
 // Return whether the next characters comprise a line comment, and consume them if so.
 bool lxl_lexer__match_line_comment(struct lxl_lexer *lexer);
 // Return wheteher the next characters comprise a block comment, and consume them if so.
@@ -393,8 +421,18 @@ bool lxl_lexer__match_digit_or_separator(struct lxl_lexer *lexer, int base);
 int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer);
 // Return whether the next characters comprise an integer literal suffix, and consume them if so.
 bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer);
-// Return whether the next characters comprise a number literal sign (e.g. +, -), and consume them if so.
+// Return non-zero if the next characters comprise a float literal prefix, and consume them if so. The
+// return value is the base corresponding to the matched prefix and OUT_exponent_marker is written
+// with the corresponding exponent marker.
+int lxl_lexer__match_float_prefix(struct lxl_lexer *lexer, const char **OUT_exponent_marker);
+// Return whether the next characters comprise a float literal suffix, and consume them if so.
+bool lxl_lexer__match_float_suffix(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a number literal sign (e.g. "+", "-"), and consume them if so.
 bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a float radix separator (e.g. "."), and consume them if so.
+bool lxl_lexer__match_radix_separator(struct lxl_lexer *lexer);
+// Return whether the next characters comprise a float exponent sign (e.g. "+", "-"), and consume them if so.
+bool lxl_lexer__match_exponent_sign(struct lxl_lexer *lexer);
 // Return non-NULL if the next characters comprise an punct and consume them if so, otherwise,
 // return NULL. On success, the return value is the pointer to the matching punct in the .puncts list.
 const char *const *lxl_lexer__match_punct(struct lxl_lexer *lexer);
@@ -427,6 +465,8 @@ int lxl_lexer__lex_word(struct lxl_lexer *lexer);
 int lxl_lexer__lex_string(struct lxl_lexer *lexer, const char *closer, enum lxl_string_type string_type);
 // Consume the digits of an integer literal in the given base (2--36).
 int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base);
+// Consume the digits of a floating-point literal with the given base and exponent marker.
+int lxl_lexer__lex_float(struct lxl_lexer *lexer, int index, const char *exponent_marker);
 
 // Get the token type corresponding to the word specified.
 int lxl_lexer__get_word_type(struct lxl_lexer *lexer, const char *word_start);
@@ -476,6 +516,7 @@ const char *lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_UNCLOSED_COMMENT: return "Unclosed block comment";
     case LXL_LERR_UNCLOSED_STRING: return "Unclosed string-like literal";
     case LXL_LERR_INVALID_INTEGER: return "Inavlid integer";
+    case LXL_LERR_INVALID_FLOAT: return "Invalid floating-point literal";
     }
     LXL_UNREACHABLE();
     return NULL;  // Unreachable.
@@ -487,6 +528,8 @@ const char *lxl_error_message(enum lxl_lex_error error) {
 // LEXER FUNCTIONS.
 
 struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
+    static const char *default_exponent_signs[] = {"+", "-", NULL};
+    static const char *default_radix_separators[] = {".", NULL};
     return (struct lxl_lexer) {
         .start = start,
         .end = end,
@@ -507,10 +550,13 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .default_int_base = 0,
         .float_prefixes = NULL,
         .float_bases = NULL,
-        .float_exponents = NULL,
+        .exponent_markers = NULL,
+        .exponent_signs = default_exponent_signs,
+        .radix_separators = default_radix_separators,
         .float_suffixes = NULL,
         .default_float_type = LXL_LERR_GENERIC,
         .default_float_base = 0,
+        .default_exponent_marker = "e",
         .puncts = NULL,
         .punct_types = NULL,
         .keywords = NULL,
@@ -544,7 +590,8 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     struct lxl_token token = lxl_lexer__start_token(lexer);
     const char *const *matched_string = NULL;
     const struct lxl_delim_pair *matched_lxl_delim_pair = NULL;
-    int int_base = 0;
+    int number_base = 0;
+    const char *exponent_marker = NULL;
     if (lxl_lexer__match_chars(lexer, "\n")) {
         // If we cannot emit line endings, we should have already skipped this LF.
         LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
@@ -562,10 +609,39 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         LXL_ASSERT(lexer->string_types != NULL);
         token.token_type = lexer->string_types[delim_index];
     }
-    else if ((int_base = lxl_lexer__match_int_prefix(lexer))) {
-        int digit_count = lxl_lexer__lex_integer(lexer, int_base);
-        token.token_type = (digit_count > 0) ? lexer->default_int_type : LXL_LERR_INVALID_INTEGER;
-        lxl_lexer__match_int_suffix(lexer);
+    else if ((number_base = lxl_lexer__match_int_prefix(lexer))) {
+        LXL_ASSERT(number_base > 1);  // Base should be valid here.
+        if (lxl_lexer__lex_integer(lexer, number_base)) {
+            token.token_type = lexer->default_int_type;
+            if (lxl_lexer__check_radix_separator(lexer) && lexer->default_float_base != 0) {
+                // Re-lex as float.
+                lxl_lexer__rewind_to(lexer, token.start);
+                if ((number_base = lxl_lexer__match_float_prefix(lexer, &exponent_marker))) {
+                    goto try_lex_float;
+                }
+                else {
+                    token.token_type = LXL_LERR_INVALID_INTEGER;
+                }
+            }
+        }
+        else {
+            token.token_type = LXL_LERR_INVALID_INTEGER;
+        }
+        if (!lxl_lexer__match_int_suffix(lexer)) {
+
+        }
+    }
+    else if ((number_base = lxl_lexer__match_float_prefix(lexer, &exponent_marker))) {
+try_lex_float:
+        LXL_ASSERT(number_base > 1);  // Base should be valid here.
+        LXL_ASSERT(exponent_marker != NULL);
+        if (lxl_lexer__lex_float(lexer, number_base, exponent_marker)) {
+            token.token_type = lexer->default_float_type;
+        }
+        else {
+            token.token_type = LXL_LERR_INVALID_FLOAT;
+        }
+
     }
     else if ((matched_string = lxl_lexer__match_punct(lexer))) {
         int punct_index = matched_string - lexer->puncts;
@@ -608,6 +684,10 @@ ptrdiff_t lxl_lexer__length_from(struct lxl_lexer *lexer, const char *start_poin
     return lexer->current - start_point;
 }
 
+ptrdiff_t lxl_lexer__length_to(struct lxl_lexer *lexer, const char *end_point) {
+    return end_point - lexer->current;
+}
+
 bool lxl_lexer__is_at_end(struct lxl_lexer *lexer) {
     return lexer->current >= lexer->end;
 }
@@ -641,6 +721,12 @@ bool lxl_lexer__advance_by(struct lxl_lexer *lexer, size_t n) {
     return true;
 }
 
+bool lxl_lexer__advance_to(struct lxl_lexer *lexer, const char *future) {
+    ptrdiff_t length = lxl_lexer__length_to(lexer, future);
+    LXL_ASSERT(length >= 0);
+    return lxl_lexer__advance_by(lexer, length);
+}
+
 bool lxl_lexer__rewind(struct lxl_lexer *lexer) {
     if (lxl_lexer__is_at_start(lexer)) return false;
     --lexer->current;
@@ -669,7 +755,7 @@ bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n) {
 bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev) {
     ptrdiff_t length = lxl_lexer__length_from(lexer, prev);
     LXL_ASSERT(length >= 0);
-    return lxl_lexer__rewind_by(length);
+    return lxl_lexer__rewind_by(lexer, length);
 }
 
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
@@ -711,6 +797,14 @@ bool lxl_lexer__check_string_n(struct lxl_lexer *lexer, const char *s, size_t n)
     return strncmp(lexer->current, s, n) == 0;
 }
 
+bool lxl_lexer__check_strings(struct lxl_lexer *lexer, const char *const *strings) {
+    if (strings == NULL) return NULL;
+    for (; *strings != NULL; ++strings) {
+        if (lxl_lexer__check_string(lexer, *strings)) return true;
+    }
+    return false;
+}
+
 bool lxl_lexer__check_whitespace(struct lxl_lexer *lexer) {
     if (!lxl_lexer__can_emit_line_ending(lexer)) {
         return lxl_lexer__check_chars(lexer, LXL_WHITESPACE_CHARS);
@@ -729,13 +823,7 @@ bool lxl_lexer__check_reserved(struct lxl_lexer *lexer) {
 }
 
 bool lxl_lexer__check_line_comment(struct lxl_lexer *lexer) {
-    if (lexer->line_comment_openers == NULL) return false;
-    for (const char *const *opener = lexer->line_comment_openers; *opener != NULL; ++opener) {
-        if (lxl_lexer__check_string(lexer, *opener)) {
-            return true;
-        }
-    }
-    return false;
+    return lxl_lexer__check_strings(lexer, lexer->line_comment_openers);
 }
 
 bool lxl_lexer__check_block_comment(struct lxl_lexer *lexer) {
@@ -801,21 +889,53 @@ int lxl_lexer__check_int_prefix(struct lxl_lexer *lexer) {
         LXL_ASSERT(lexer->integer_bases != NULL);
         for (int i = 0; lexer->integer_prefixes[i] != NULL; ++i) {
             if (lxl_lexer__check_string(lexer, lexer->integer_prefixes[i])) {
-                lexer->current = start;
+                lxl_lexer__rewind_to(lexer, start);
                 return lexer->integer_bases[i];
             }
         }
     }
-    lexer->current = start;
-    return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
+    int default_base = lexer->default_int_base;
+    return (lxl_lexer__check_digit(lexer, default_base)) ? default_base : 0;
 }
 
 bool lxl_lexer__check_int_suffix(struct lxl_lexer *lexer) {
-    if (lexer->integer_suffixes == NULL) return false;
-    for (int i = 0; lexer->integer_suffixes[i] != NULL; ++i) {
-        if (lxl_lexer__check_string(lexer, lexer->integer_suffixes[i])) return true;
+    return lxl_lexer__check_strings(lexer, lexer->integer_suffixes);
+}
+
+int lxl_lexer__check_float_prefix(struct lxl_lexer *lexer, const char **OUT_exponent_marker) {
+    const char *start = lexer->current;
+    lxl_lexer__match_number_sign(lexer);
+    if (lexer->float_prefixes) {
+        LXL_ASSERT(lexer->float_bases != NULL);
+        LXL_ASSERT(lexer->exponent_markers != NULL);
+        for (int i = 0; lexer->float_prefixes[i] != NULL; ++i) {
+            if (lxl_lexer__check_string(lexer, lexer->float_prefixes[i])) {
+                lxl_lexer__rewind_to(lexer, start);
+                *OUT_exponent_marker = lexer->exponent_markers[i];
+                return lexer->float_bases[i];
+            }
+        }
     }
-    return false;
+    lxl_lexer__rewind_to(lexer, start);
+    if (!lxl_lexer__check_digit(lexer, lexer->default_float_base)) return 0;
+    *OUT_exponent_marker = lexer->default_exponent_marker;
+    return lexer->default_float_base;
+}
+
+bool lxl_lexer__check_float_suffix(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_strings(lexer, lexer->float_suffixes);
+}
+
+bool lxl_lexer__check_number_sign(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_strings(lexer, lexer->number_signs);
+}
+
+bool lxl_lexer__check_radix_separator(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_strings(lexer, lexer->radix_separators);
+}
+
+bool lxl_lexer__check_exponent_sign(struct lxl_lexer *lexer) {
+    return lxl_lexer__check_strings(lexer, lexer->exponent_signs);
 }
 
 const char *const *lxl_lexer__check_punct(struct lxl_lexer *lexer) {
@@ -845,6 +965,14 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, const char *s) {
 bool lxl_lexer__match_string_n(struct lxl_lexer *lexer, const char *s, size_t n) {
     if (lxl_lexer__check_string_n(lexer, s, n)) {
         return lxl_lexer__advance_by(lexer, n);
+    }
+    return false;
+}
+
+bool lxl_lexer__match_strings(struct lxl_lexer *lexer, const char *const *strings) {
+    if (strings == NULL) return NULL;
+    for (; *strings != NULL; ++strings) {
+        if (lxl_lexer__match_string(lexer, *strings)) return true;
     }
     return false;
 }
@@ -926,20 +1054,41 @@ int lxl_lexer__match_int_prefix(struct lxl_lexer *lexer) {
     return (lxl_lexer__check_digit(lexer, lexer->default_int_base)) ? lexer->default_int_base : 0;
 }
 
-bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer) {
-    if (lexer->number_signs == NULL) return false;
-    for (const char *const *sign = lexer->number_signs; *sign != NULL; ++sign) {
-        if (lxl_lexer__match_string(lexer, *sign)) return true;
-    }
-    return false;
+bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer) {
+    return lxl_lexer__match_strings(lexer, lexer->integer_suffixes);
 }
 
-bool lxl_lexer__match_int_suffix(struct lxl_lexer *lexer) {
-    if (lexer->integer_suffixes == NULL) return false;
-    for (int i = 0; lexer->integer_suffixes[i] != NULL; ++i) {
-        if (lxl_lexer__match_string(lexer, lexer->integer_suffixes[i])) return true;
+int lxl_lexer__match_float_prefix(struct lxl_lexer *lexer, const char **OUT_exponent_marker) {
+    lxl_lexer__match_number_sign(lexer);
+    if (lexer->float_prefixes) {
+        LXL_ASSERT(lexer->float_bases != NULL);
+        LXL_ASSERT(lexer->exponent_markers != NULL);
+        for (int i = 0; lexer->float_prefixes[i]; ++i) {
+            if (lxl_lexer__match_string(lexer, lexer->float_prefixes[i])) {
+                *OUT_exponent_marker = lexer->exponent_markers[i];
+                return lexer->float_bases[i];
+            }
+        }
     }
-    return false;
+    if (!lxl_lexer__match_digit(lexer, lexer->default_float_base)) return 0;
+    *OUT_exponent_marker = lexer->default_exponent_marker;
+    return lexer->default_float_base;
+}
+
+bool lxl_lexer__match_float_suffix(struct lxl_lexer *lexer) {
+    return lxl_lexer__match_strings(lexer, lexer->float_suffixes);
+}
+
+bool lxl_lexer__match_number_sign(struct lxl_lexer *lexer) {
+    return lxl_lexer__match_strings(lexer, lexer->number_signs);
+}
+
+bool lxl_lexer__match_radix_separator(struct lxl_lexer *lexer) {
+    return lxl_lexer__match_strings(lexer, lexer->radix_separators);
+}
+
+bool lxl_lexer__match_exponent_sign(struct lxl_lexer *lexer) {
+    return lxl_lexer__match_strings(lexer, lexer->exponent_signs);
 }
 
 const char *const *lxl_lexer__match_punct(struct lxl_lexer *lexer) {
@@ -1098,7 +1247,26 @@ int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
     }
     if (digit_count <= 0) {
         // Un-lex token which is not a valid integer literal.
-        lexer->current = start;
+        lxl_lexer__rewind_to(lexer, start);
+    }
+    return lxl_lexer__length_from(lexer, start);
+}
+
+int lxl_lexer__lex_float(struct lxl_lexer *lexer, int base, const char *exponent_marker) {
+    const char *start = lexer->current;
+    int digit_length = lxl_lexer__lex_integer(lexer, base);
+    if (lxl_lexer__match_radix_separator(lexer)) {
+        // Part after '.' OE.
+        digit_length += lxl_lexer__lex_integer(lexer, base);
+    }
+    if (lxl_lexer__match_string(lexer, exponent_marker)) {
+        // Part after 'e' OE.
+        lxl_lexer__match_exponent_sign(lexer);  // Consume sign before actual exponent.
+        digit_length += lxl_lexer__lex_integer(lexer, base);
+    }
+    if (digit_length <= 0) {
+        // Un-lex token which is not a valid floating-point literal.
+        lxl_lexer__rewind_to(lexer, start);
     }
     return lxl_lexer__length_from(lexer, start);
 }
