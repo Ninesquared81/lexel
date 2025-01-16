@@ -77,6 +77,7 @@ int main(void) {
             "def hello() {\n"
             "    println(\"Hello, World!\")  # Greet the world.\n"
             "    println(\"2 and 2 are\", 2 + 2)\n"
+            "    println(\"pi = \", 3.141592653, \"...\")\n"
             "}\n"
             ));
     // We define how our line comments should start in this NULL-terminated list.
@@ -162,5 +163,12 @@ int main(void) {
     lxl_lexer_reset(&lexer);
     print_tokens(&lexer);
     // Lovely!
+    printf("\n\n");
+    lxl_lexer_reset(&lexer);
+    // We still haven't touched on floats. Lexel has some useful defaults when it comes to floats,
+    // so all we need do is define the default base and the float token type.
+    lexer.default_float_base = 10;
+    lexer.default_float_type = TOKEN_FLOAT;
+    print_tokens(&lexer);
     return 0;
 }
