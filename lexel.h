@@ -144,12 +144,12 @@ struct lxl_lexer {
     const char *digit_separators;    // List of digit separator characters allowed in number literals.
     const char *const *number_signs;      // List of signs which can precede number literals (e.g. "+", "-").
     const char *const *integer_prefixes;  // List of prefixes for integer literals.
-    int *integer_bases;                   // List of bases associated with each prefix.
+    const int *integer_bases;             // List of bases associated with each prefix.
     const char *const *integer_suffixes;  // List of suffixes for integer literals.
     int default_int_type;     // Default token type for integer literals.
     int default_int_base;     // Default base for (unprefixed) integer literals.
     const char *const *float_prefixes;   // List of prefixes for floating-point literals.
-    int *float_bases;                    // List of bases associated with each float prefix.
+    const int *float_bases;              // List of bases associated with each float prefix.
     const char *const *exponent_markers; // List of exponent markers (e.g. "e") for each float prefix.
     const char *const *exponent_signs;   // List of signs allowed in float exponents (default: ["+", "-"]).
     const char *const *radix_separators; // List of radix separators for float literals (default: ["."]).
@@ -158,9 +158,9 @@ struct lxl_lexer {
     int default_float_base;  // Default base for (unprefixed) float literals.
     const char *default_exponent_marker; // Default exponent marker for float literals (default: "e").
     const char *const *puncts;   // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
-    int *punct_types;            // List of token types corresponding to each punctuation token above.
+    const int *punct_types;      // List of token types corresponding to each punctuation token above.
     const char *const *keywords; // List of keywords (word tokens with unique types).
-    int *keyword_types;          // List of token types corresponding to each keyword.
+    const int *keyword_types;    // List of token types corresponding to each keyword.
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     int previous_token_type;       // The type of the most recently lexed token.
