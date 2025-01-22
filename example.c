@@ -109,7 +109,7 @@ int main(void) {
     // We set the token type for strings. Lexel allows each delimiter to be associated with a different
     // type. We only have one delimiter, though, so that point is somewhat moot. It is important to know,
     // however, that this array must be the same length as the `.string_delims` string.
-    lexer.string_types = (int[]) {TOKEN_STRING};
+    lexer.line_string_types = (int[]) {TOKEN_STRING};
     // Let's give it a try!
     // See print_tokens() above for the definition of this function.
     print_tokens(&lexer);

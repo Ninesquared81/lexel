@@ -139,7 +139,8 @@ struct lxl_lexer {
     const struct lxl_delim_pair *line_string_delims;  // List of paired line string-like literal delimiters.
     const struct lxl_delim_pair *multiline_string_delims; // List of multiline string-like literal delimiters.
     const char *string_escape_chars; // List of escape characters in strings (ignore delimiters after).
-    const int *string_types;         // List of token types associated with each string delimiter.
+    const int *line_string_types;      // List of token types associated with each line string delimiter.
+    const int *multiline_string_types; // List of token types associated with each multiline string delimiter.
     const char *digit_separators;    // List of digit separator characters allowed in number literals.
     const char *const *number_signs;      // List of signs which can precede number literals (e.g. "+", "-").
     const char *const *integer_prefixes;  // List of prefixes for integer literals.
@@ -541,6 +542,8 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .line_string_delims = NULL,
         .multiline_string_delims = NULL,
         .string_escape_chars = NULL,
+        .line_string_types = NULL,
+        .multiline_string_types = NULL,
         .number_signs = NULL,
         .digit_separators = NULL,
         .integer_prefixes = NULL,
@@ -600,14 +603,14 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     else if ((matched_lxl_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_LINE))) {
         lxl_lexer__lex_string(lexer, matched_lxl_delim_pair->closer, LXL_STRING_LINE);
         int delim_index = matched_lxl_delim_pair - lexer->line_string_delims;
-        LXL_ASSERT(lexer->string_types != NULL);
-        token.token_type = lexer->string_types[delim_index];
+        LXL_ASSERT(lexer->line_string_types != NULL);
+        token.token_type = lexer->line_string_types[delim_index];
     }
     else if ((matched_lxl_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_MULTILINE))) {
         lxl_lexer__lex_string(lexer, matched_lxl_delim_pair->closer, LXL_STRING_MULTILINE);
         int delim_index = matched_lxl_delim_pair - lexer->multiline_string_delims;
-        LXL_ASSERT(lexer->string_types != NULL);
-        token.token_type = lexer->string_types[delim_index];
+        LXL_ASSERT(lexer->multiline_string_types != NULL);
+        token.token_type = lexer->multiline_string_types[delim_index];
     }
     else if ((number_base = lxl_lexer__match_int_prefix(lexer))) {
         LXL_ASSERT(number_base > 1);  // Base should be valid here.
