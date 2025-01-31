@@ -298,6 +298,16 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 
 // These functions are used by the lexer to alter its own state.
 // They should not be used from a parser, but the interface is exposed to make writing a custom lexer easier.
+// Hooks may be used to inject arbitrary logic into the lexer at well-defined stages. These hooks may call
+// to internal lexer functions as they are essential extensions to the lexer itself.
+
+// Call the specified hook on lexer with no additional arguments.
+#define LXL_LEXER__CALL_HOOK0(lexer, hook) \
+    if ((lexer)->hook) (lexer)->hook(lexer)
+
+// Call the specified hook on lexer with at least one additional argument.
+#define LXL_LEXER__CALL_HOOKN(lexer, hook, ...) \
+    if ((lexer)->hook) (lexer)->hook(lexer, __VA_ARGS__)
 
 
 // Return the number of characters consumed so far.
@@ -636,7 +646,8 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
             token.token_type = lexer->default_int_type;
             if (lxl_lexer__check_radix_separator(lexer) && lexer->default_float_base != 0) {
                 // Re-lex as float.
-                lxl_lexer__rewind_to(lexer, token.start);
+                LXL_LEXER__CALL_HOOK0(lexer, before_unlex_int_hook);
+                lxl_lexer__unlex(lexer);
                 if ((number_base = lxl_lexer__match_float_prefix(lexer, &exponent_marker))) {
                     goto try_lex_float;
                 }
@@ -1203,7 +1214,7 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
     }
     lexer->previous_token_type = token->token_type;
     if (lexer->status == LXL_LSTS_LEXING) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
-    if (lexer->after_token_hook) lexer->after_token_hook(lexer, token);
+    LXL_LEXER__CALL_HOOKN(lexer, after_token_hook, token);
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
@@ -1279,8 +1290,9 @@ int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
     }
     if (digit_count <= 0) {
         // Un-lex token which is not a valid integer literal.
-        if (lexer->before_unlex_int_hook) lexer->before_unlex_int_hook(lexer);
+        LXL_LEXER__CALL_HOOK0(lexer, before_unlex_int_hook);
         lxl_lexer__unlex(lexer);
+        return 0;
     }
     return lxl_lexer__length_from(lexer, start);
 }
@@ -1299,8 +1311,9 @@ int lxl_lexer__lex_float(struct lxl_lexer *lexer, int base, const char *exponent
     }
     if (digit_length <= 0) {
         // Un-lex token which is not a valid floating-point literal.
-        if (lexer->before_unlex_float_hook) lexer->before_unlex_float_hook(lexer);
+        LXL_LEXER__CALL_HOOK0(lexer, before_unlex_float_hook);
         lxl_lexer__unlex(lexer);
+        return 0;
     }
     return lxl_lexer__length_from(lexer, start);
 }
