@@ -179,6 +179,7 @@ struct lxl_lexer {
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
     void (*before_unlex_int_hook)(struct lxl_lexer *);  // Hook called before failed integer token unlexed.
+    void (*before_unlex_float_hook)(struct lxl_lexer *);  // Hook called before failed float token unlexed.
     void (*after_token_hook)(struct lxl_lexer *, struct lxl_token *);  // Hook called after token finalised.
     int previous_token_type;      // The type of the most recently lexed token.
     int line_ending_type;         // The type to use for line ending tokens (default: LXL_TOKEN_LINE_ENDING).
@@ -1298,6 +1299,7 @@ int lxl_lexer__lex_float(struct lxl_lexer *lexer, int base, const char *exponent
     }
     if (digit_length <= 0) {
         // Un-lex token which is not a valid floating-point literal.
+        if (lexer->before_unlex_float_hook) lexer->before_unlex_float_hook(lexer);
         lxl_lexer__unlex(lexer);
     }
     return lxl_lexer__length_from(lexer, start);
