@@ -1279,7 +1279,7 @@ int lxl_lexer__lex_integer(struct lxl_lexer *lexer, int base) {
     if (digit_count <= 0) {
         // Un-lex token which is not a valid integer literal.
         if (lexer->before_unlex_int_hook) lexer->before_unlex_int_hook(lexer);
-        lxl_lexer__rewind_to(lexer, start);
+        lxl_lexer__unlex(lexer);
     }
     return lxl_lexer__length_from(lexer, start);
 }
@@ -1298,7 +1298,7 @@ int lxl_lexer__lex_float(struct lxl_lexer *lexer, int base, const char *exponent
     }
     if (digit_length <= 0) {
         // Un-lex token which is not a valid floating-point literal.
-        lxl_lexer__rewind_to(lexer, start);
+        lxl_lexer__unlex(lexer);
     }
     return lxl_lexer__length_from(lexer, start);
 }
