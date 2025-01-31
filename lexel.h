@@ -146,6 +146,7 @@ struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
     const char *end;          // The end of the lexer's source code.
     const char *current;      // Pointer to the current character.
+    const char *token_start;  // Pointer to the start of the token currently being lexed.
     struct lxl_location pos;  // The current position (line, column) in the source.
     const char *const *line_comment_openers;            // List of line comment openers.
     const struct lxl_delim_pair *nestable_comment_delims;   // List of paired nestable comment delimiters.
@@ -547,6 +548,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .start = start,
         .end = end,
         .current = start,
+        .token_start = start,
         .pos = {0, 0},
         .line_comment_openers = NULL,
         .nestable_comment_delims = NULL,
@@ -1175,6 +1177,7 @@ int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct lxl_delim_pair
 
 struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
     if (lexer->status == LXL_LSTS_READY) lexer->status = LXL_LSTS_LEXING;
+    lexer->token_start = lexer->current;
     return (struct lxl_token) {
         .start = lexer->current,
         .end = lexer->current,
