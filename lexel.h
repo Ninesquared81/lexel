@@ -1100,7 +1100,7 @@ int lxl_lexer__match_float_prefix(struct lxl_lexer *lexer, const char **OUT_expo
             }
         }
     }
-    if (!lxl_lexer__match_digit(lexer, lexer->default_float_base)) return 0;
+    if (!lxl_lexer__check_digit(lexer, lexer->default_float_base)) return 0;
     *OUT_exponent_marker = lexer->default_exponent_marker;
     return lexer->default_float_base;
 }
