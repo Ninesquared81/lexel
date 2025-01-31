@@ -328,6 +328,9 @@ bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
 // Rewind the lexer to a previous point in its input and return whether all characters could be rewound.
 bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev);
 
+// Un-lex the current token (i.e. reset the lexer to the start of the token).
+void lxl_lexer__unlex(struct lexer *lexer);
+
 // Recalculate the current column in the lexer.
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer);
 
@@ -773,6 +776,11 @@ bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev) {
     ptrdiff_t length = lxl_lexer__length_from(lexer, prev);
     LXL_ASSERT(length >= 0);
     return lxl_lexer__rewind_by(lexer, length);
+}
+
+void lxl_lexer__unlex(struct lxl_lexer *lexer) {
+    bool result = lxl_lexer__rewind_to(lexer, lexer->token_start);
+    LXL_ASSERT(result && "Lexer could not rewind to the start of the token!");
 }
 
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
