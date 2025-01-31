@@ -330,7 +330,7 @@ bool lxl_lexer__rewind_by(struct lxl_lexer *lexer, size_t n);
 bool lxl_lexer__rewind_to(struct lxl_lexer *lexer, const char *prev);
 
 // Un-lex the current token (i.e. reset the lexer to the start of the token).
-void lxl_lexer__unlex(struct lexer *lexer);
+void lxl_lexer__unlex(struct lxl_lexer *lexer);
 
 // Recalculate the current column in the lexer.
 void lxl_lexer__recalc_column(struct lxl_lexer *lexer);
