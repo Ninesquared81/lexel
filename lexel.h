@@ -127,6 +127,20 @@ enum lxl_string_type {
     LXL_STRING_MULTILINE,
 };
 
+// A lexical token.
+// The token's value is stored as a string (via the `start` and `end` pointers).
+// Further processing of this value is left to the caller.
+// The `token_type` determines the type of the token. The meanings of different types
+// is left to the caller, but negative types are reserved by lexel and have special
+// meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
+// token stream.
+struct lxl_token {
+    const char *start;        // The start of the token.
+    const char *end;          // The end of the token.
+    struct lxl_location loc;  // The location (line, column) of the token in the source.
+    int token_type;           // The type of the lexical token. Negative values have special meanings.
+};
+
 // The main lexer object.
 struct lxl_lexer {
     const char *start;        // The start of the lexer's source code.
@@ -163,26 +177,13 @@ struct lxl_lexer {
     const int *keyword_types;    // List of token types corresponding to each keyword.
     int default_word_type;       // Default word token type (for non-keywords).
     enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
+    void (*after_token_hook)(struct lxl_lexer *, struct lxl_token *);  // Hook called after token finalised.
     int previous_token_type;      // The type of the most recently lexed token.
     int line_ending_type;         // The type to use for line ending tokens (default: LXL_TOKEN_LINE_ENDING).
     enum lxl_lex_error error;     // Error code set to the current lexing error.
     enum lxl_lexer_status status; // Current status of the lexer.
     bool emit_line_endings;       // Should line endings have their own tokens? (default: false)
     bool collect_line_endings;    // Should consecutive line ending tokens be combined? (default: true)
-};
-
-// A lexical token.
-// The token's value is stored as a string (via the `start` and `end` pointers).
-// Further processing of this value is left to the caller.
-// The `token_type` determines the type of the token. The meanings of different types
-// is left to the caller, but negative types are reserved by lexel and have special
-// meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
-// token stream.
-struct lxl_token {
-    const char *start;        // The start of the token.
-    const char *end;          // The end of the token.
-    struct lxl_location loc;  // The location (line, column) of the token in the source.
-    int token_type;           // The type of the lexical token. Negative values have special meanings.
 };
 
 // END LEXEL CORE.
@@ -1189,6 +1190,7 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
     }
     lexer->previous_token_type = token->token_type;
     if (lexer->status == LXL_LSTS_LEXING) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
+    if (lexer->after_token_hook) lexer->after_token_hook(lexer, token);
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
