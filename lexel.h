@@ -36,9 +36,10 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
+#include <limits.h>   // INT_MAX
+#include <stdarg.h>   // va_list et al.
 #include <stdbool.h>  // bool, false, true -- requires C99
 #include <stddef.h>   // size_t, ptrdiff_t
-#include <limits.h>   // INT_MAX
 
 // CUSTOMISATION OPTIONS.
 
@@ -202,6 +203,14 @@ struct lxl_string_view {
     size_t length;
 };
 
+// Region allocator.
+// NOTE: the `.data` buffer is allocated by the caller.
+struct lxl_region {
+    size_t capacity;
+    size_t alloc_count;
+    void *data;
+};
+
 // END LEXEL ADDITIONAL.
 
 
@@ -255,6 +264,44 @@ struct lxl_string_view lxl_token_value(struct lxl_token token);
 const char *lxl_error_message(enum lxl_lex_error error);
 
 // END TOKEN INTERFACE.
+
+
+// LEXER BUILDER INTERFACE.
+
+// These functions provide an interface for easily building a lexer as defined by lexel.
+// This interface is NOT required for using lexel; you can also build a lexer by hand.
+// NOTE: the lexer should be created via `lxl_lexer_new()` or `lxl_lexer_from_sv()`
+// BEFORE calling any of the functions listed below.
+
+// Make lexer support integer literals. The basic usage of this function/macro is to define
+// the token type for integer literals and provide support for unprefixed integer literals,
+// which by default are decimal (base-10), but this can be customised by setting
+// lexer.default_int_base. Additional prefix--base pairs (of type const char *, int,
+// respectively). These will be allocated in the given region. If no additional bases
+// are needed, the region parameter may be NULL.
+// NOTE: the prefix pointers are assumed to point into memory that persists throughout the entire
+// lifetime of the lexer. If this is not the case, the string must first be copied to a persisent
+// buffer.
+// NOTE 2: the region must live at least as long as the lexer itself.
+// All arguments are forwarded to lxl_builder_add_integers_impl().
+#define lxl_builder_add_integers(lexer, region, /* token_type, */ ...)   \
+    lxl_builder_add_integers_impl(lexer, region, __VA_ARGS__, (const char *)NULL);
+// Make lexer support integer literals. This function is not intended to be directly called but
+// to be forwarded-to by the macro version above. At least one variadic parameter is needed
+// including NULL which terminates the argument list.
+bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int token_type, ...);
+
+// Add the given integer suffixes to the lexer.
+// NOTE: the suffix pointers are assumed to point to memory that lives at least as long as the lexer,
+// as is the region.
+#define lxl_builder_add_integer_suffixes(lexer, /* region, */ ...)       \
+    lxl_builder_add_integer_suffixes_impl(lexer, __VA_ARGS__)
+// Add the given integer suffixes to the lexer. This function is not intended to be directly called but
+// to be forwarded-to by the macro version above. At least one variadic parameter is needed
+// incluing NULL which terminates the argument list.
+bool lxl_builder_add_integer_suffixes_impl(struct lxl_lexer *lexer, struct lxl_region *region, ...);
+
+// END LEXER BUILDER INTERFACE.
 
 
 // LEXER EXTERNAL INTERFACE.
@@ -522,6 +569,18 @@ bool lxl_sv_equal(struct lxl_string_view a, struct lxl_string_view b);
 // END LEXEL STRING VIEW.
 
 
+// LEXEL REGION.
+
+// Create an region wiht a fixed-size as its backing buffer.
+#define REGION_FROM_ARRAY(array)                 \
+    ((struct lxl_region) {.capacity = sizeof(array), .alloc_count = 0, .data = (array)})
+
+// Allocate into an region.
+void *lxl_region_allocate(size_t size, struct lxl_region *region);
+
+// END LEXEL REGION.
+
+
 // Implementation.
 
 #ifdef LEXEL_IMPLEMENTATION
@@ -549,6 +608,65 @@ const char *lxl_error_message(enum lxl_lex_error error) {
 }
 
 // END TOKEN FUNCTIONS.
+
+
+// LEXER BUILDER FUNCTIONS
+
+bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int token_type, ...) {
+    va_list vargs;
+    LXL_ASSERT(lexer != NULL);
+    lexer->default_int_type = token_type;
+    lexer->default_int_base = 10;
+    int arg_count = 0;
+    va_start(vargs, token_type);
+    for (const char *arg; (arg = va_arg(vargs, const char *)); ++arg_count) {
+        (void)va_arg(vargs, int);  // Consume base argument.
+    }
+    va_end(vargs);
+    LXL_ASSERT(arg_count >= 0);
+    if (arg_count == 0) return true;
+    const char **prefixes = lxl_region_allocate((arg_count + 1) * sizeof *prefixes, region);
+    int *bases = lxl_region_allocate(arg_count * sizeof *bases, region);
+    if (!prefixes || !bases) return false;  // Failed to allocate in region.
+    va_start(vargs, token_type);
+    for (int i = 0; i < arg_count; ++i) {
+        const char *prefix = va_arg(vargs, const char *);
+        LXL_ASSERT(prefix != NULL);
+        int base = va_arg(vargs, int);
+        prefixes[i] = prefix;
+        bases[i] = base;
+    }
+    va_end(vargs);
+    prefixes[arg_count] = NULL;
+    lexer->integer_prefixes = prefixes;
+    lexer->integer_bases = bases;
+    return true;
+}
+
+bool lxl_builder_add_integer_suffixes_impl(struct lxl_lexer *lexer, struct lxl_region *region, ...) {
+    va_list vargs;
+    LXL_ASSERT(lexer != NULL);
+    int arg_count = 0;
+    va_start(vargs, region);
+    for (const char *arg; (arg = va_arg(vargs, const char *)); ++arg_count) {
+        /* Do nothing. */
+    }
+    va_end(vargs);
+    LXL_ASSERT(arg_count >= 0);
+    const char **suffixes = lxl_region_allocate((arg_count + 1) * sizeof *suffixes, region);
+    if (!suffixes) return false;
+    va_start(vargs, region);
+    for (int i = 0; i < arg_count; ++i) {
+        const char *suffix = va_arg(vargs, const char *);
+        LXL_ASSERT(suffix != NULL);
+        suffixes[i] = suffix;
+    }
+    va_end(vargs);
+    suffixes[arg_count] = NULL;
+    return true;
+}
+
+// END LEXER BUILDER FUNCTIONS.
 
 
 // LEXER FUNCTIONS.
@@ -1362,6 +1480,17 @@ bool lxl_sv_equal(struct lxl_string_view a, struct lxl_string_view b) {
 
 
 // END STRING VIEW FUNCTIONS.
+
+// REGION FUNCTIONS.
+
+void *lxl_region_allocate(size_t size, struct lxl_region *region) {
+    if (region->alloc_count + size > region->capacity) return NULL;
+    void *ptr = (char *)region->data + region->alloc_count;
+    region->alloc_count += size;
+    return ptr;
+}
+
+// END REGION FUNCTIONS.
 
 #endif  // LEXEL_IMPLEMENTATION
 
