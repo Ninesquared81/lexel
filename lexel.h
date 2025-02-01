@@ -36,10 +36,13 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <limits.h>   // INT_MAX
-#include <stdarg.h>   // va_list et al.
-#include <stdbool.h>  // bool, false, true -- requires C99
-#include <stddef.h>   // size_t, ptrdiff_t
+#include <assert.h>      // assert(), static_assert()  -- requires C11
+#include <limits.h>      // INT_MAX
+#include <stdalign.h>    // alignof (C11) -- requires C11
+#include <stdarg.h>      // va_list et al.
+#include <stdbool.h>     // bool, false, true -- requires C99
+#include <stddef.h>      // size_t, ptrdiff_t, max_align_t
+#include <stdint.h>      // intptr_t
 
 // CUSTOMISATION OPTIONS.
 
@@ -58,9 +61,14 @@
 // The default value is the standard assert() macro.
 // NOTE: this macro should not be customised to merely disable assertions. To do that, use LXL_NO_ASSERT.
 #ifndef LXL_ASSERT_MACRO
- #include <assert.h>
- #define LXL_ASSERT_MACRO assert
+# define LXL_ASSERT_MACRO assert
 #endif
+
+#ifndef LXL_REGION_ALIGN
+# define LXL_REGION_ALIGN alignof(max_align_t)
+#endif
+
+static_assert(((LXL_REGION_ALIGN) & ((LXL_REGION_ALIGN)-1)) == 0, "Alignment must be a power of 2");
 
 // END CUSTOMISATION OPTIONS.
 
@@ -71,9 +79,9 @@
 // LXL_ASSERT() is lexel's library assertion macro. It should not be directly customised.
 // Use LXL_ASSERT_MACRO and LXL_NO_ASSERT to cusomise instead.
 #ifndef LXL_NO_ASSERT
- #define LXL_ASSERT(...) LXL_ASSERT_MACRO(__VA_ARGS__)
+# define LXL_ASSERT(...) LXL_ASSERT_MACRO(__VA_ARGS__)
 #else  // Disable library assertions.
- #define LXL_ASSERT(...) ((void)0)
+# define LXL_ASSERT(...) ((void)0)
 #endif
 
 // This marks a location in code as logically unreachable.
@@ -208,7 +216,7 @@ struct lxl_string_view {
 struct lxl_region {
     size_t capacity;
     size_t alloc_count;
-    void *data;
+    char *data;
 };
 
 // END LEXEL ADDITIONAL.
@@ -571,12 +579,17 @@ bool lxl_sv_equal(struct lxl_string_view a, struct lxl_string_view b);
 
 // LEXEL REGION.
 
-// Create an region wiht a fixed-size as its backing buffer.
+// Create a region with a fixed-size array as its backing buffer.
 #define REGION_FROM_ARRAY(array)                 \
     ((struct lxl_region) {.capacity = sizeof(array), .alloc_count = 0, .data = (array)})
 
-// Allocate into an region.
+// Allocate into a region.
 void *lxl_region_allocate(size_t size, struct lxl_region *region);
+// Reset a region (deallocate all allocations).
+void lxl_region_reset(struct lxl_region *region);
+
+// Align a region to the next alignment boundary.
+bool lxl_region__align(struct lxl_region *region);
 
 // END LEXEL REGION.
 
@@ -1484,10 +1497,26 @@ bool lxl_sv_equal(struct lxl_string_view a, struct lxl_string_view b) {
 // REGION FUNCTIONS.
 
 void *lxl_region_allocate(size_t size, struct lxl_region *region) {
+    if (!lxl_region__align(region)) return NULL;
     if (region->alloc_count + size > region->capacity) return NULL;
-    void *ptr = (char *)region->data + region->alloc_count;
+    void *ptr = &region->data[region->alloc_count];
     region->alloc_count += size;
     return ptr;
+}
+
+void lxl_region_reset(struct lxl_region *region) {
+    region->alloc_count = 0;
+}
+
+bool lxl_region__align(struct lxl_region *region) {
+    intptr_t iptr = (intptr_t)&region->data[region->alloc_count];
+    int residue = iptr & ((int)LXL_REGION_ALIGN - 1);
+    if (residue == 0) return true;
+    int offset = (int)LXL_REGION_ALIGN - residue;
+    LXL_ASSERT(offset > 0);
+    if (iptr + offset >= (intptr_t)&region->data[region->capacity]) return false;
+    region->alloc_count += offset;
+    return true;
 }
 
 // END REGION FUNCTIONS.
