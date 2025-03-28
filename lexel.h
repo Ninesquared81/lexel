@@ -145,7 +145,7 @@ enum lxl_string_type {
 // A lexical token.
 // The token's value is stored as a string (via the `start` and `end` pointers).
 // Further processing of this value is left to the caller.
-// The `token_type` determines the type of the token. The meanings of different types
+// The `kind` determines the type of the token. The meanings of different types
 // is left to the caller, but negative types are reserved by lexel and have special
 // meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
 // token stream.
@@ -153,7 +153,7 @@ struct lxl_token {
     const char *start;        // The start of the token.
     const char *end;          // The end of the token.
     struct lxl_location loc;  // The location (line, column) of the token in the source.
-    int token_type;           // The type of the lexical token. Negative values have special meanings.
+    int kind;           // The type of the lexical token. Negative values have special meanings.
 };
 
 // The main lexer object.
@@ -256,10 +256,10 @@ enum lxl__token_mvs {
 
 // Return whether `tok` is a special end-of-tokens token.
 #define LXL_TOKEN_IS_END(tok) \
-    ((tok).token_type == LXL_TOKENS_END || (tok).token_type == LXL_TOKENS_END_ABNORMAL)
+    ((tok).kind == LXL_TOKENS_END || (tok).kind == LXL_TOKENS_END_ABNORMAL)
 
 // Return whetehr `tok` is a special error token.
-#define LXL_TOKEN_IS_ERROR(tok) ((tok).token_type <= LXL_LERR_GENERIC)
+#define LXL_TOKEN_IS_ERROR(tok) ((tok).kind <= LXL_LERR_GENERIC)
 
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);
@@ -288,12 +288,12 @@ const char *lxl_error_message(enum lxl_lex_error error);
 // buffer.
 // NOTE 2: the region must live at least as long as the lexer itself.
 // All arguments are forwarded to lxl_builder_add_integers_impl().
-#define lxl_builder_add_integers(lexer, region, /* token_type, */ ...)   \
+#define lxl_builder_add_integers(lexer, region, /* kind, */ ...)   \
     lxl_builder_add_integers_impl(lexer, region, __VA_ARGS__, (const char *)NULL);
 // Make lexer support integer literals. This function is not intended to be directly called but
 // to be forwarded-to by the macro version above. At least one variadic parameter is needed
 // including NULL which terminates the argument list.
-bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int token_type, ...);
+bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int kind, ...);
 
 // Add the given integer suffixes to the lexer.
 // NOTE: the suffix pointers are assumed to point to memory that lives at least as long as the lexer,
@@ -617,13 +617,13 @@ const char *lxl_error_message(enum lxl_lex_error error) {
 
 // LEXER BUILDER FUNCTIONS
 
-bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int token_type, ...) {
+bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *region, int kind, ...) {
     va_list vargs;
     LXL_ASSERT(lexer != NULL);
-    lexer->default_int_type = token_type;
+    lexer->default_int_type = kind;
     lexer->default_int_base = 10;
     int arg_count = 0;
-    va_start(vargs, token_type);
+    va_start(vargs, kind);
     for (const char *arg; (arg = va_arg(vargs, const char *)); ++arg_count) {
         (void)va_arg(vargs, int);  // Consume base argument.
     }
@@ -633,7 +633,7 @@ bool lxl_builder_add_integers_impl(struct lxl_lexer *lexer, struct lxl_region *r
     const char **prefixes = lxl_region_allocate((arg_count + 1) * sizeof *prefixes, region);
     int *bases = lxl_region_allocate(arg_count * sizeof *bases, region);
     if (!prefixes || !bases) return false;  // Failed to allocate in region.
-    va_start(vargs, token_type);
+    va_start(vargs, kind);
     for (int i = 0; i < arg_count; ++i) {
         const char *prefix = va_arg(vargs, const char *);
         LXL_ASSERT(prefix != NULL);
@@ -717,7 +717,7 @@ struct lxl_lexer lxl_lexer_new(const char *start, const char *end) {
         .keyword_types = NULL,
         .default_word_type = LXL_TOKEN_UNINIT,
         .word_lexing_rule = LXL_LEX_SYMBOLIC,
-        .previous_token_type = LXL_TOKEN_NO_TOKEN,
+        .previous_kind = LXL_TOKEN_NO_TOKEN,
         .line_ending_type = LXL_TOKEN_LINE_ENDING,
         .error = LXL_LERR_OK,
         .status = LXL_LSTS_READY,
@@ -863,7 +863,7 @@ void lxl_lexer__recalc_column(struct lxl_lexer *lexer) {
 
 bool lxl_lexer__can_emit_line_ending(struct lxl_lexer *lexer) {
     if (!lexer->emit_line_endings) return false;
-    if (lexer->previous_token_type == LXL_TOKEN_LINE_ENDING) {
+    if (lexer->previous_kind == LXL_TOKEN_LINE_ENDING) {
         return !lexer->collect_line_endings;
     }
     return true;
@@ -1260,15 +1260,15 @@ void lxl_lexer__start_token(struct lxl_lexer *lexer) {
         .start = lexer->current,
         .end = lexer->current,
         .loc = lexer->pos,
-        .token_type = LXL_TOKEN_UNINIT,
+        .kind = LXL_TOKEN_UNINIT,
     };
 }
 
 struct lxl_token lxl_lexer__finish_token(struct lxl_lexer *lexer) {
-    token->end = lexer->current;
+    lexer->next_token->end = lexer->current;
     if (lexer->error) {
         LXL_CALL_HOOK(lexer, before_error_token_hook);
-        lexer->next_token.token_type = lexer->error;  // Set error as token type.
+        lexer->next_token.kind = lexer->error;  // Set error as token type.
         lexer->error = LXL_LERR_OK;  // Clear error.
     }
     if (!lxl_lexer__is_finished(lexer)) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
@@ -1279,11 +1279,11 @@ struct lxl_token lxl_lexer__finish_token(struct lxl_lexer *lexer) {
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
     lxl_lexer__start_token(lexer);
     if (lexer->status != LXL_LSTS_FINISHED_ABNORMAL) {
-        lexer->next_token.token_type = LXL_TOKENS_END;
+        lexer->next_token.kind = LXL_TOKENS_END;
         lexer->status = LXL_LSTS_FINISHED;
     }
     else {
-        lexer->next_token.token_type = LXL_TOKENS_END_ABNORMAL;
+        lexer->next_token.kind = LXL_TOKENS_END_ABNORMAL;
     }
     return lxl_lexer__finish_token(lexer);
 }
