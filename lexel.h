@@ -165,7 +165,7 @@ struct lxl_lexer {
     const char *end;              // The end of the lexer's source code.
     const char *current;          // Pointer to the current character.
     struct lxl_location pos;      // The current position (line, column) in the source.
-    struct lxl_token next_token;  // The next token to be emitted.
+    struct lxl_token token;  // The next token to be emitted.
     // Customisation flags.
     bool emit_line_endings;       // Should line endings have their own tokens? (default: false)
     bool collect_line_endings;    // Should consecutive line ending tokens be combined? (default: true)
@@ -1256,7 +1256,7 @@ int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct lxl_delim_pair
 }
 
 void lxl_lexer__start_token(struct lxl_lexer *lexer) {
-    lexer->next_token = (struct lxl_token) {
+    lexer->token = (struct lxl_token) {
         .start = lexer->current,
         .end = lexer->current,
         .loc = lexer->pos,
@@ -1265,25 +1265,25 @@ void lxl_lexer__start_token(struct lxl_lexer *lexer) {
 }
 
 struct lxl_token lxl_lexer__finish_token(struct lxl_lexer *lexer) {
-    lexer->next_token->end = lexer->current;
+    lexer->token->end = lexer->current;
     if (lexer->error) {
         LXL_CALL_HOOK(lexer, before_error_token_hook);
-        lexer->next_token.kind = lexer->error;  // Set error as token type.
+        lexer->token.kind = lexer->error;  // Set error as token type.
         lexer->error = LXL_LERR_OK;  // Clear error.
     }
     if (!lxl_lexer__is_finished(lexer)) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
     LXL_CALL_HOOK(lexer, after_token_hook);
-    return lexer->next_token;
+    return lexer->token;
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
     lxl_lexer__start_token(lexer);
     if (lexer->status != LXL_LSTS_FINISHED_ABNORMAL) {
-        lexer->next_token.kind = LXL_TOKENS_END;
+        lexer->token.kind = LXL_TOKENS_END;
         lexer->status = LXL_LSTS_FINISHED;
     }
     else {
-        lexer->next_token.kind = LXL_TOKENS_END_ABNORMAL;
+        lexer->token.kind = LXL_TOKENS_END_ABNORMAL;
     }
     return lxl_lexer__finish_token(lexer);
 }
