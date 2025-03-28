@@ -112,10 +112,16 @@ enum lxl_lex_error {
 
 // Lexer status.
 enum lxl_lexer_status {
-    LXL_LSTS_READY,              // Ready to lex next token.
-    LXL_LSTS_LEXING,             // In the process of lexing a token.
-    LXL_LSTS_FINISHED,           // Reached the end of tokens.
-    LXL_LSTS_FINISHED_ABNORMAL,  // Reached the end of tokens abnormally.
+    LXL_LSTS_READY,                // Ready to lex next token.
+    LXL_LSTS_SKIPPING_WHITESPACE,  // Skipping whitespace (and comments).
+    LXL_LSTS_DECIDING_TYPE,        // Deciding the type of the token.
+    LXL_LSTS_LEXING_STRING,        // Lexing a string-like literal token.
+    LXL_LSTS_LEXING_INTEGER,       // Lexing an integer literal token.
+    LXL_LSTS_LEXING_FLOAT,         // Lexing a floating-point literal token.
+    LXL_LSTS_LEXING_WORD,          // Lexing a word token.
+    LXL_LSTS_TOKEN_LEXED,          // Token has been fully lexed.
+    LXL_LSTS_FINISHED,             // Reached the end of tokens.
+    LXL_LSTS_FINISHED_ABNORMAL,    // Reached the end of tokens abnormally.
 };
 
 enum lxl_word_lexing_rule {
@@ -152,50 +158,40 @@ struct lxl_token {
 
 // The main lexer object.
 struct lxl_lexer {
-    const char *start;        // The start of the lexer's source code.
-    const char *end;          // The end of the lexer's source code.
-    const char *current;      // Pointer to the current character.
-    const char *token_start;  // Pointer to the start of the token currently being lexed.
-    struct lxl_location pos;  // The current position (line, column) in the source.
-    const char *const *line_comment_openers;            // List of line comment openers.
-    const struct lxl_delim_pair *nestable_comment_delims;   // List of paired nestable comment delimiters.
-    const struct lxl_delim_pair *unnestable_comment_delims; // List of paired unnestable comment delimiters.
-    const struct lxl_delim_pair *line_string_delims;  // List of paired line string-like literal delimiters.
-    const struct lxl_delim_pair *multiline_string_delims; // List of multiline string-like literal delimiters.
-    const char *string_escape_chars;   // List of escape characters in strings (ignore delimiters after).
-    const int *line_string_types;      // List of token types associated with each line string delimiter.
-    const int *multiline_string_types; // List of token types associated with each multiline string delimiter.
-    const char *digit_separators;      // List of digit separator characters allowed in number literals.
-    const char *const *number_signs;      // List of signs which can precede number literals (e.g. "+", "-").
-    const char *const *integer_prefixes;  // List of prefixes for integer literals.
-    const int *integer_bases;             // List of bases associated with each prefix.
-    const char *const *integer_suffixes;  // List of suffixes for integer literals.
-    int default_int_type;                 // Default token type for integer literals.
-    int default_int_base;                 // Default base for (unprefixed) integer literals.
-    const char *const *float_prefixes;    // List of prefixes for floating-point literals.
-    const int *float_bases;               // List of bases associated with each float prefix.
-    const char *const *exponent_markers;  // List of exponent markers (e.g. "e") for each float prefix.
-    const char *const *exponent_signs;    // List of signs allowed in float exponents (default: ["+", "-"]).
-    const char *const *radix_separators;  // List of radix separators for float literals (default: ["."]).
-    const char *const *float_suffixes;    // List of suffixes for float literals.
-    int default_float_type;               // Default token type for float literals.
-    int default_float_base;               // Default base for (unprefixed) float literals.
-    const char *default_exponent_marker; // Default exponent marker for float literals (default: "e").
-    const char *const *puncts;   // List of (non-word) punctaution token values (e.g., "+", "==", ";", etc.).
-    const int *punct_types;      // List of token types corresponding to each punctuation token above.
-    const char *const *keywords; // List of keywords (word tokens with unique types).
-    const int *keyword_types;    // List of token types corresponding to each keyword.
-    int default_word_type;       // Default word token type (for non-keywords).
-    enum lxl_word_lexing_rule word_lexing_rule;  // The word lexing rule to use (default: symbolic).
-    void (*before_unlex_int_hook)(struct lxl_lexer *);  // Hook called before failed integer token unlexed.
-    void (*before_unlex_float_hook)(struct lxl_lexer *);  // Hook called before failed float token unlexed.
-    void (*after_token_hook)(struct lxl_lexer *, struct lxl_token *);  // Hook called after token finalised.
-    int previous_token_type;      // The type of the most recently lexed token.
-    int line_ending_type;         // The type to use for line ending tokens (default: LXL_TOKEN_LINE_ENDING).
-    enum lxl_lex_error error;     // Error code set to the current lexing error.
+    // Lexer state.
     enum lxl_lexer_status status; // Current status of the lexer.
+    enum lxl_lex_error error;     // Error code set to the current lexing error.
+    const char *start;            // The start of the lexer's source code.
+    const char *end;              // The end of the lexer's source code.
+    const char *current;          // Pointer to the current character.
+    struct lxl_location pos;      // The current position (line, column) in the source.
+    struct lxl_token next_token;  // The next token to be emitted.
+    // Customisation flags.
     bool emit_line_endings;       // Should line endings have their own tokens? (default: false)
     bool collect_line_endings;    // Should consecutive line ending tokens be combined? (default: true)
+    // Query functions (optional; can be left NULL if not needed).
+    bool (*match_whitespace_char)(struct lxl_lexer *self);  // Consume a single whitespace character.
+    // --- Default behaviour: return true if next character is in `LXL_WHITESPACE_CHARS`.
+    bool (*match_line_comment)(struct lxl_lexer *self);  // Consume the start delimiter of a line comment.
+    // --- Default behaviour: always return false.
+    bool (*check_punctaution_char)(struct lxl_lexer *self);  // Check if the next character is punctuation.
+    // --- Default behavour: always return false.
+    bool (*match_word_char)(struct lxl_lexer *self);  // Consume a single word-constituent character.
+    // --- Default behaviour: return true for any non-whitespace, non-punctuation character.
+    // Hook functions (called at specific times).
+    void (*before_token_hook)(struct lxl_lexer *self);      // Called at the start of token lexing.
+    void (*after_whitespace_hook)(struct lxl_lexer *self);  // Called after whitespace has been skipped.
+    void (*before_integer_hook)(struct lxl_lexer *self);    // Called before integer lexing.*
+    void (*after_integer_hook)(struct lxl_lexer *self);     // Called after integer lexing.**
+    void (*before_float_hook)(struct lxl_lexer *self);      // Called before floating point lexing.*
+    void (*after_float_hook)(struct lxl_lexer *self);       // Called after floating point lexing.**
+    void (*on_error_hook)(struct lxl_lexer *self);          // Called as soon as an error occurs.
+    void (*before_error_token_hook)(struct lxl_lexer *self);// Called before an error token is finalised.
+    void (*after_token_hook)(struct lxl_lexer *self);       // Called just before token is returned.
+    // Notes:
+    // *  these hooks are only called after the respective token type has been determined/guessed.
+    // ** these hooks are called just before the respective lexing functions return to the caller,
+    //    meaning they can change the lexer's status for more advanced control.
 };
 
 // END LEXEL CORE.
@@ -353,17 +349,13 @@ void lxl_lexer_reset(struct lxl_lexer *lexer);
 
 // These functions are used by the lexer to alter its own state.
 // They should not be used from a parser, but the interface is exposed to make writing a custom lexer easier.
-// Hooks may be used to inject arbitrary logic into the lexer at well-defined stages. These hooks may call
-// to internal lexer functions as they are essential extensions to the lexer itself.
+// Hooks may be used to inject arbitrary logic into the lexer at well-defined stages. Some hooks can change
+// the internal status of the lexer, allowing for more complex lexing.
 
-// Call the specified hook on lexer with no additional arguments.
-#define LXL_LEXER__CALL_HOOK0(lexer, hook) \
-    if ((lexer)->hook) (lexer)->hook(lexer)
-
-// Call the specified hook on lexer with at least one additional argument.
-#define LXL_LEXER__CALL_HOOKN(lexer, hook, ...) \
-    if ((lexer)->hook) (lexer)->hook(lexer, __VA_ARGS__)
-
+// Call the specified hook on the object pointed to by `self`.
+// NOTE: a hook is a member of `self` with type `void (*)(typeof(self))`.
+#define LXL_CALL_HOOK(self, hook) \
+    do if ((self)->hook) (self)->hook(self); while (0)
 
 // Return the number of characters consumed so far.
 ptrdiff_t lxl_lexer__head_length(struct lxl_lexer *lexer);
@@ -742,88 +734,24 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) {
         return lxl_lexer__create_end_token(lexer);
     }
+    LXL__CALL_HOOK(lexer, before_token_hook);
     lxl_lexer__skip_whitespace(lexer);
+    LXL__CALL_HOOK(lexer, after_whitespace_hook);
     if (lexer->error) {
         return lxl_lexer__create_error_token(lexer);
     }
     else if (lxl_lexer__is_at_end(lexer)) {
         return lxl_lexer__create_end_token(lexer);
     }
-    struct lxl_token token = lxl_lexer__start_token(lexer);
-    const char *const *matched_string = NULL;
-    const struct lxl_delim_pair *matched_lxl_delim_pair = NULL;
-    int number_base = 0;
-    const char *exponent_marker = NULL;
-    if (lxl_lexer__match_chars(lexer, "\n")) {
-        // If we cannot emit line endings, we should have already skipped this LF.
-        LXL_ASSERT(lxl_lexer__can_emit_line_ending(lexer));
-        token.token_type = lexer->line_ending_type;
-    }
-    else if ((matched_lxl_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_LINE))) {
-        lxl_lexer__lex_string(lexer, matched_lxl_delim_pair->closer, LXL_STRING_LINE);
-        int delim_index = matched_lxl_delim_pair - lexer->line_string_delims;
-        LXL_ASSERT(lexer->line_string_types != NULL);
-        token.token_type = lexer->line_string_types[delim_index];
-    }
-    else if ((matched_lxl_delim_pair = lxl_lexer__match_string_opener(lexer, LXL_STRING_MULTILINE))) {
-        lxl_lexer__lex_string(lexer, matched_lxl_delim_pair->closer, LXL_STRING_MULTILINE);
-        int delim_index = matched_lxl_delim_pair - lexer->multiline_string_delims;
-        LXL_ASSERT(lexer->multiline_string_types != NULL);
-        token.token_type = lexer->multiline_string_types[delim_index];
-    }
-    else if ((number_base = lxl_lexer__match_int_prefix(lexer))) {
-        LXL_ASSERT(number_base > 1);  // Base should be valid here.
-        if (lxl_lexer__lex_integer(lexer, number_base)) {
-            token.token_type = lexer->default_int_type;
-            if (lxl_lexer__check_radix_separator(lexer) && lexer->default_float_base != 0) {
-                // Re-lex as float.
-                LXL_LEXER__CALL_HOOK0(lexer, before_unlex_int_hook);
-                lxl_lexer__unlex(lexer);
-                if ((number_base = lxl_lexer__match_float_prefix(lexer, &exponent_marker))) {
-                    goto try_lex_float;
-                }
-                else {
-                    token.token_type = LXL_LERR_INVALID_INTEGER;
-                }
-            }
+    lxl_lexer__start_token(lexer);
+    lexer->status = LXL_LSTS_DECIDING_TYPE;
+    while (lexer->status != LXL_LSTS_TOKEN_LEXED) {
+        if (lxl_lexer__check_punctuation(lexer)) {
+            lxl_lexer__lex_punctuation(lexer);
         }
-        else {
-            token.token_type = LXL_LERR_INVALID_INTEGER;
-        }
-        if (!lxl_lexer__match_int_suffix(lexer)) {
-
-        }
+        LXL_ASSERT(lexer->status != LXL_LSTS_DECIDING_TYPE && "Lexel error: lexer still deciding type");
     }
-    else if ((number_base = lxl_lexer__match_float_prefix(lexer, &exponent_marker))) {
-try_lex_float:
-        LXL_ASSERT(number_base > 1);  // Base should be valid here.
-        LXL_ASSERT(exponent_marker != NULL);
-        if (lxl_lexer__lex_float(lexer, number_base, exponent_marker)) {
-            token.token_type = lexer->default_float_type;
-        }
-        else {
-            token.token_type = LXL_LERR_INVALID_FLOAT;
-        }
-
-    }
-    else if ((matched_string = lxl_lexer__match_punct(lexer))) {
-        int punct_index = matched_string - lexer->puncts;
-        LXL_ASSERT(lexer->punct_types != NULL);
-        token.token_type = lexer->punct_types[punct_index];
-    }
-    else {
-        switch (lexer->word_lexing_rule) {
-        case LXL_LEX_SYMBOLIC:
-            lxl_lexer__lex_symbolic(lexer);
-            break;
-        case LXL_LEX_WORD:
-            lxl_lexer__lex_word(lexer);
-            break;
-        }
-        token.token_type = lxl_lexer__get_word_type(lexer, token.start);
-    }
-    lxl_lexer__finish_token(lexer, &token);
-    return token;
+    return lxl_lexer__finish_token(lexer);
 }
 
 bool lxl_lexer_is_finished(struct lxl_lexer *lexer) {
@@ -1272,6 +1200,7 @@ const char *const *lxl_lexer__match_punct(struct lxl_lexer *lexer) {
 }
 
 int lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
+    lexer->status = LXL_LSTS_SKIPPING_WHITESPACE;
     const char *whitespace_start = lexer->current;
     for(;;) {
         if (lxl_lexer__check_whitespace(lexer)) {
@@ -1326,10 +1255,8 @@ int lxl_lexer__skip_block_comment(struct lxl_lexer *lexer, struct lxl_delim_pair
     return lxl_lexer__length_from(lexer, comment_start);
 }
 
-struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
-    if (lexer->status == LXL_LSTS_READY) lexer->status = LXL_LSTS_LEXING;
-    lexer->token_start = lexer->current;
-    return (struct lxl_token) {
+void lxl_lexer__start_token(struct lxl_lexer *lexer) {
+    lexer->next_token = (struct lxl_token) {
         .start = lexer->current,
         .end = lexer->current,
         .loc = lexer->pos,
@@ -1337,35 +1264,34 @@ struct lxl_token lxl_lexer__start_token(struct lxl_lexer *lexer) {
     };
 }
 
-void lxl_lexer__finish_token(struct lxl_lexer *lexer, struct lxl_token *token) {
+struct lxl_token lxl_lexer__finish_token(struct lxl_lexer *lexer) {
     token->end = lexer->current;
     if (lexer->error) {
-        token->token_type = lexer->error;  // Set error as token type.
+        LXL_CALL_HOOK(lexer, before_error_token_hook);
+        lexer->next_token.token_type = lexer->error;  // Set error as token type.
         lexer->error = LXL_LERR_OK;  // Clear error.
     }
-    lexer->previous_token_type = token->token_type;
-    if (lexer->status == LXL_LSTS_LEXING) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
-    LXL_LEXER__CALL_HOOKN(lexer, after_token_hook, token);
+    if (!lxl_lexer__is_finished(lexer)) lexer->status = LXL_LSTS_READY;  // Ready for the next token.
+    LXL_CALL_HOOK(lexer, after_token_hook);
+    return lexer->next_token;
 }
 
 struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer) {
-    struct lxl_token token = lxl_lexer__start_token(lexer);
+    lxl_lexer__start_token(lexer);
     if (lexer->status != LXL_LSTS_FINISHED_ABNORMAL) {
-        token.token_type = LXL_TOKENS_END;
+        lexer->next_token.token_type = LXL_TOKENS_END;
         lexer->status = LXL_LSTS_FINISHED;
     }
     else {
-        token.token_type = LXL_TOKENS_END_ABNORMAL;
+        lexer->next_token.token_type = LXL_TOKENS_END_ABNORMAL;
     }
-    lxl_lexer__finish_token(lexer, &token);
-    return token;
+    return lxl_lexer__finish_token(lexer);
 }
 
 struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer) {
-    struct lxl_token token = lxl_lexer__start_token(lexer);
+    lxl_lexer__start_token(lexer);
     if (!lexer->error) lexer->error = LXL_LERR_GENERIC;  // Emit a generic error token if no error is set.
-    lxl_lexer__finish_token(lexer, &token);  // This function handles setting the error type.
-    return token;
+    return lxl_lexer__finish_token(lexer);  // This function handles setting the error type.
 }
 
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
