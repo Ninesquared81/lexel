@@ -114,12 +114,12 @@ enum lxl_lex_error {
 enum lxl_lexer_status {
     LXL_LSTS_READY,                // Ready to lex next token.
     LXL_LSTS_SKIPPING_WHITESPACE,  // Skipping whitespace (and comments).
-    LXL_LSTS_DECIDING_TYPE,        // Deciding the type of the token.
+    LXL_LSTS_LEX_START,            // Lexing has begun.
     LXL_LSTS_LEXING_STRING,        // Lexing a string-like literal token.
     LXL_LSTS_LEXING_INTEGER,       // Lexing an integer literal token.
     LXL_LSTS_LEXING_FLOAT,         // Lexing a floating-point literal token.
     LXL_LSTS_LEXING_WORD,          // Lexing a word token.
-    LXL_LSTS_TOKEN_LEXED,          // Token has been fully lexed.
+    LXL_LSTS_LEX_END,              // Token has been fully lexed.
     LXL_LSTS_FINISHED,             // Reached the end of tokens.
     LXL_LSTS_FINISHED_ABNORMAL,    // Reached the end of tokens abnormally.
 };
@@ -729,12 +729,9 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         return lxl_lexer__create_end_token(lexer);
     }
     lxl_lexer__start_token(lexer);
-    lexer->status = LXL_LSTS_DECIDING_TYPE;
-    while (lexer->status != LXL_LSTS_TOKEN_LEXED) {
-        if (lxl_lexer__check_punctuation(lexer)) {
-            lxl_lexer__lex_punctuation(lexer);
-        }
-        LXL_ASSERT(lexer->status != LXL_LSTS_DECIDING_TYPE && "Lexel error: lexer still deciding type");
+    // TODO: maybe a function "is_lexing" or so?
+    while (lexer->status != LXL_LSTS_LEX_END && !lxl_lexer_is_finished(lexer)) {
+        lxl_lexer__get_token(lexer);
     }
     return lxl_lexer__finish_token(lexer);
 }
@@ -1247,6 +1244,7 @@ void lxl_lexer__start_token(struct lxl_lexer *lexer) {
         .loc = lexer->pos,
         .kind = LXL_TOKEN_UNINIT,
     };
+    lexer->status = LXL_LSTS_LEX_START;
 }
 
 struct lxl_token lxl_lexer__finish_token(struct lxl_lexer *lexer) {
@@ -1277,6 +1275,43 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer) {
     lxl_lexer__start_token(lexer);
     if (!lexer->error) lexer->error = LXL_LERR_GENERIC;  // Emit a generic error token if no error is set.
     return lxl_lexer__finish_token(lexer);  // This function handles setting the error type.
+}
+
+bool lxl_lexer__get_token(struct lxl_lexer *lexer) {
+    int base;
+    if ((base = lxl_lexer__match_integer_prefix(lexer))) {
+        int count = lxl_lexer__lex_integer(lexer, base);
+        if (!count) {
+            // TODO: write this function. NOTE: function should set status to LXL_LSTS_TOKEN_LEXED
+            lxl_lexer__error(lexer, LXL_LERR_INVALID_INTEGER);
+            return false;
+        }
+        if (!lxl_lexer__should_try_float(lexer)) {
+            lexer->status = LXL_LSTS_TOKEN_LEXED;
+            return true;
+        }
+        // Try float.
+        lxl_lexer__unlex(lexer);
+    }
+    // Floats.
+    if (lxl_lexer__check_punctuation(lexer)) {
+        int count = lxl_lexer__lex_punctuation(lexer);
+        LXL_ASSERT(count >= 1 && "Invalid state");
+        LXL_ASSERT(lexer->get_punctuation);
+        while (lexer->token.start < lexer->current) {
+            if (lxl_lexer__get_punctuation(lexer)) {
+                // lexer->get_punctuation(lexer, lexer->token.start, lexer->current, &lexer->token.kind)
+                lexer->status = LXL_LSTS_TOKEN_LEXED;
+                return true;
+            }
+            lxl_lexer__rewind(lexer);
+        }
+        lxl_lexer__error(lexer, LXL_LERR_UNKNOWN_PUNCTUATION);
+        return false;
+    }
+    LXL_UNREACHABLE();
+    lexer->status = LXL_LSTS_FINISHED_ABNORMAL;
+    return false;
 }
 
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
