@@ -116,9 +116,13 @@ enum lxl_lexer_status {
     LXL_LSTS_SKIPPING_WHITESPACE,  // Skipping whitespace (and comments).
     LXL_LSTS_LEX_START,            // Lexing has begun.
     LXL_LSTS_LEXING_STRING,        // Lexing a string-like literal token.
+    LXL_LSTS_FAIL_LEX_STRING,      // Failed to lex a string.
     LXL_LSTS_LEXING_INTEGER,       // Lexing an integer literal token.
+    LXL_LSTS_FAIL_LEX_INTEGER,     // Failed to lex an integer.
     LXL_LSTS_LEXING_FLOAT,         // Lexing a floating-point literal token.
+    LXL_LSTS_FAIL_LEX_FLOAT,       // Failed to lex a float.
     LXL_LSTS_LEXING_WORD,          // Lexing a word token.
+    LXL_LSTS_FAIL_LEX_WORD,        // Failed to lex a word.
     LXL_LSTS_LEX_END,              // Token has been fully lexed.
     LXL_LSTS_FINISHED,             // Reached the end of tokens.
     LXL_LSTS_FINISHED_ABNORMAL,    // Reached the end of tokens abnormally.
@@ -442,6 +446,9 @@ struct lxl_token lxl_lexer__create_end_token(struct lxl_lexer *lexer);
 // To emit a non-empty error token, use `lxl_lexer__finish_token()` instead.
 struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer);
 
+// Attempt to lex the token. This may need to be called mulitple times.
+bool lxl_lexer__lex_token(struct lxl_lexer *lexer);
+
 // Consume all non-whitespace characters and return the number consumed.
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer);
 // Consume a word token (non-reserved symbolic) and return the number of characters read.
@@ -646,9 +653,8 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
         return lxl_lexer__create_end_token(lexer);
     }
     lxl_lexer__start_token(lexer);
-    // TODO: maybe a function "is_lexing" or so?
-    while (lexer->status != LXL_LSTS_LEX_END && !lxl_lexer_is_finished(lexer)) {
-        lxl_lexer__get_token(lexer);
+    while (lxl_lexer__is_lexing(lexer)) {
+        lxl_lexer__lex_token(lexer);
     }
     return lxl_lexer__finish_token(lexer);
 }
@@ -948,41 +954,16 @@ struct lxl_token lxl_lexer__create_error_token(struct lxl_lexer *lexer) {
     return lxl_lexer__finish_token(lexer);  // This function handles setting the error type.
 }
 
-bool lxl_lexer__get_token(struct lxl_lexer *lexer) {
-    int base;
-    if ((base = lxl_lexer__match_integer_prefix(lexer))) {
-        int count = lxl_lexer__lex_integer(lexer, base);
-        if (!count) {
-            // TODO: write this function. NOTE: function should set status to LXL_LSTS_TOKEN_LEXED
-            lxl_lexer__error(lexer, LXL_LERR_INVALID_INTEGER);
-            return false;
-        }
-        if (!lxl_lexer__should_try_float(lexer)) {
-            lexer->status = LXL_LSTS_TOKEN_LEXED;
-            return true;
-        }
-        // Try float.
-        lxl_lexer__unlex(lexer);
+bool lxl_lexer__lex_token(struct lxl_lexer *lexer) {
+    lxl_lexer__unlex(lexer);
+    switch (lexer->status) {
+    case LXL_LEX_START:         return lxl_lexer__lex_string(lexer);
+    case LXL_FAIL_LEX_STRING:   return lxl_lexer__lex_integer(lexer);
+    case LXL_FAIL_LEX_INTEGER:  return lxl_lexer__lex_float(lexer);
+    case LXL_FAIL_LEX_FLOAT:    return lxl_lexer__lex_word(lexer);
+    case LXL_FAIL_LEX_WORD:     return false;
+    default: LXL_UNREACHABLE(); return false;
     }
-    // Floats.
-    if (lxl_lexer__check_punctuation(lexer)) {
-        int count = lxl_lexer__lex_punctuation(lexer);
-        LXL_ASSERT(count >= 1 && "Invalid state");
-        LXL_ASSERT(lexer->get_punctuation);
-        while (lexer->token.start < lexer->current) {
-            if (lxl_lexer__get_punctuation(lexer)) {
-                // lexer->get_punctuation(lexer, lexer->token.start, lexer->current, &lexer->token.kind)
-                lexer->status = LXL_LSTS_TOKEN_LEXED;
-                return true;
-            }
-            lxl_lexer__rewind(lexer);
-        }
-        lxl_lexer__error(lexer, LXL_LERR_UNKNOWN_PUNCTUATION);
-        return false;
-    }
-    LXL_UNREACHABLE();
-    lexer->status = LXL_LSTS_FINISHED_ABNORMAL;
-    return false;
 }
 
 int lxl_lexer__lex_symbolic(struct lxl_lexer *lexer) {
