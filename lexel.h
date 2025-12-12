@@ -183,10 +183,10 @@ struct lxl_delim_pair {
 // meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
 // token stream.
 struct lxl_token {
-    const char *start;        // The start of the token.
-    const char *end;          // The end of the token.
-    struct lxl_location loc;  // The location (line, column) of the token in the source.
-    int kind;           // The type of the lexical token. Negative values have special meanings.
+    const char *start;          // The start of the token.
+    const char *end;            // The end of the token.
+    struct lxl_location loc;    // The location (line, column) of the token in the source.
+    int kind;                   // The type of the lexical token. Negative values have special meanings.
 };
 
 // The main lexer object.
