@@ -293,7 +293,7 @@ enum lxl_unicode_error {
 // UTF-8 character stream
 struct lxl_unicode_utf8_stream {
     struct lxl_string_view buffer;      // The backing buffer containing the characters for the stream.
-    int cursor;                         // The current position in the stream.
+    ptrdiff_t cursor;                   // The current position in the stream.
     enum lxl_unicode_error error;       // The latest error, cleared/set when the stream is advanced.
 };
 
