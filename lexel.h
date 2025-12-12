@@ -133,8 +133,8 @@ enum lxl_lexer_status {
 
 // A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
 struct lxl_delim_pair {
-    const char *opener;
-    const char *closer;
+    struct lxl_string_view opener;
+    struct lxl_string_view closer;
 };
 
 // A lexical token.
