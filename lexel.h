@@ -302,14 +302,14 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
 #define LXL_TOKEN_IS_END(tok) \
     ((tok).kind == LXL_TOKENS_END || (tok).kind == LXL_TOKENS_END_ABNORMAL)
 
-// Return whetehr `tok` is a special error token.
+// Return whether `tok` is a special error token.
 #define LXL_TOKEN_IS_ERROR(tok) ((tok).kind <= LXL_LERR_GENERIC)
 
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);
 
 // Return a textual representation of the error code.
-const char *lxl_error_message(enum lxl_lex_error error);
+struct lxl_string_view lxl_error_message(enum lxl_lex_error error);
 
 // END TOKEN INTERFACE.
 
