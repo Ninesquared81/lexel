@@ -1,5 +1,10 @@
 #include "lexel.h"
 
+struct lxl_string_view lxl_unicode_utf8_stream_tail(const struct lxl_unicode_utf8_stream *stream) {
+    LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
+    return lxl_sv_slice_end(stream->buffer, stream->cursor);
+}
+
 bool lxl_unicode_utf8_stream_is_finished(const struct lxl_unicode_utf8_stream *stream) {
     return stream->cursor >= stream->buffer.length;
 }
