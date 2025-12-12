@@ -274,6 +274,26 @@ enum lxl__token_mvs {
 // END LEXEL MAGIC VALUES.
 
 
+// LEXER INTERFACE.
+
+// Advance the lexer by a single character and return the codepoint.
+lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer);
+
+// Rewind the lexer by a single character.
+void lxl_lexer__rewind(struct lxl_lexer *lexer);
+
+// Rewind to the start of the current line.
+void lxl_lexer__reset_line(struct lxl_lexer *lexer);
+
+// Match one of a set of characters.
+bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars);
+
+// Match a whole string.
+bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string);
+
+// END LEXER INTERFACE.
+
+
 // TOKEN INTERFACE.
 
 // These functions are for working with tokens.
@@ -320,24 +340,5 @@ lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stre
 
 // END UNICODE INTERFACE.
 
-
-// LEXER INTERFACE.
-
-// Advance the lexer by a single character and return the codepoint.
-lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer);
-
-// Rewind the lexer by a single character.
-void lxl_lexer__rewind(struct lxl_lexer *lexer);
-
-// Rewind to the start of the current line.
-void lxl_lexer__reset_line(struct lxl_lexer *lexer);
-
-// Match one of a set of characters.
-bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars);
-
-// Match a whole string.
-bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string);
-
-// END LEXER INTERFACE.
 
 #endif  // LEXEL_H
