@@ -1,5 +1,9 @@
 #include "lexel.h"
 
+bool lxl_unicode_utf8_stream_is_finished(const struct lxl_unicode_utf8_stream *stream) {
+    return stream->cursor >= stream->buffer.length;
+}
+
 int lxl_count_leading_ones(uint8_t byte) {
     int count = 0;
     for (; byte & 0x80; byte <<= 1) {
