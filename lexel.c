@@ -1,7 +1,13 @@
+#include <string.h>         // strlen.
+
 #include "lexel.h"
 
 
 // STRING VIEW INTERFACE.
+
+struct lxl_string_view lxl_sv_from_cstring(const char *string) {
+    return lxl_sv_from_startlen(string, strlen(string));
+}
 
 struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length) {
     LXL_ASSERT(length >= 0);
