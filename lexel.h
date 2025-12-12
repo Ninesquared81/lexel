@@ -314,6 +314,29 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error);
 // END TOKEN INTERFACE.
 
 
+// STRING VIEW INTERFACE.
+
+// Get a string view from a start pointer and length.
+struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length);
+
+// Get a string view from a start pointer and an end pointer (one past the end).
+struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end);
+
+// Get a pointer to one past the end of a string view.
+const char *lxl_sv_end(const struct lxl_string_view *sv);
+
+// Return a slice of the string view in the range [from, to).
+struct string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to);
+
+// Return a slice from the given index up to the end of a string view.
+struct string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from);
+
+// Return a slice from the start of a string view up to the given index.
+struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_t to);
+
+// END STRING VIEW INTERFACE.
+
+
 // UNICODE INTERFACE.
 
 // These functions are for working with Unicode/UTF-8, which is what lexel expects.
