@@ -28,9 +28,9 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <assert.h>      // assert(), static_assert()  -- requires C11
-#include <stdbool.h>     // bool, false, true -- requires C99
-#include <stddef.h>      // size_t
+#include <assert.h>     // assert(), static_assert()  -- requires C11
+#include <stdbool.h>    // bool, false, true -- requires C99
+#include <stddef.h>     // ptrdiff_t
 
 // CUSTOMISATION OPTIONS.
 
@@ -213,7 +213,7 @@ struct lxl_lexer {
 // This is a read-only (non-owning) view into a string, consiting of a `start` pointer and `length`.
 struct lxl_string_view {
     const char *start;
-    size_t length;
+    ptrdiff_t length;
 };
 
 // END LEXEL ADDITIONAL.
