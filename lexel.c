@@ -1,5 +1,64 @@
 #include "lexel.h"
 
+
+// STRING VIEW INTERFACE.
+
+struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length) {
+    LXL_ASSERT(length >= 0);
+    return (struct lxl_string_view) {
+        .start = start;
+        .length = length;
+    };
+}
+
+struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) {
+    LXL_ASSERT(start <= end);
+    return (struct lxl_string_view) {
+        .start = start;
+        .length = end - start;
+    };
+}
+
+const char *lxl_sv_end(const struct lxl_string_view *sv) {
+    return &sv->start[sv->length];
+};
+
+ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index) {
+    if (index < 0) index += sv->length;
+    if (index < 0) index = 0;
+    if (index > sv.length) index = sv->length;
+}
+
+bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t index) {
+    return 0 <= index && index <= sv.length;
+}
+
+bool lxl_sv_index_in_proper_range(const struct lxl_string_view *sv, ptrdiff_t index) {
+    return 0 <= index && index < sv.length;
+}
+
+struct string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to) {
+    from = lxl_sv_normalise_index(sv, from);
+    to = lxl_sv_normalise_index(sv, to);
+    ptrdiff_t length = to - from;
+    if (length < 0) length = 0;
+    return lxl_sv_from_startlen(&sv->start[from], length);
+}
+
+struct string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from) {
+    return lxl_sv_slice(sv, from, sv->length);
+}
+
+struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_t to) {
+    return lxl_sv_slice(sv, 0, to);
+}
+
+
+// END STRING VIEW INTERFACE.
+
+
+// UNICODE INTERFACE.
+
 struct lxl_string_view lxl_unicode_utf8_stream_tail(const struct lxl_unicode_utf8_stream *stream) {
     LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
     return lxl_sv_slice_end(stream->buffer, stream->cursor);
@@ -78,3 +137,5 @@ lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stre
     }
     return value;
 }
+
+// END UNICODE INTERFACE.
