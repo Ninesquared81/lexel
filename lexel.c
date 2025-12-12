@@ -2,6 +2,26 @@
 
 #include "lexel.h"
 
+// TOKEN INTERFACE.
+
+struct lxl_string_view lxl_token_value(struct lxl_token token) {
+    return lxl_sv_from_startend(token.start, token.end);
+}
+
+struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
+    switch (error) {
+    case LXL_LERR_OK:               return LXL_SV_FROM_STRLIT("No error");
+    case LXL_LERR_GENERIC:          return LXL_SV_FROM_STRLIT("Generic error");
+    case LXL_LERR_EOF:              return LXL_SV_FROM_STRLIT("Unexpected end of input");
+    case LXL_LERR_UNCLOSED_COMMENT: return LXL_SV_FROM_STRLIT("Unclosed comment");
+    case LXL_LERR_UNCLOSED_STRING:  return LXL_SV_FROM_STRLIT("Unclosed string or string-like literal");
+    case LXL_LERR_INVALID_INTEGER:  return LXL_SV_FROM_STRLIT("Invalid integer literal");
+    case LXL_LERR_INVALID_FLOAT:    return LXL_SV_FROM_STRLIT("Invlaid floating-point literal");
+    }
+}
+
+// END TOKEN INTERFACE.
+
 
 // STRING VIEW INTERFACE.
 
