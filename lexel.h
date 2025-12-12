@@ -68,6 +68,44 @@
 
 // END META-DEFINITIONS.
 
+
+// LEXEL ADDITIONAL.
+
+// Additional definitions beyond the core below.
+
+// A string view.
+// This is a read-only (non-owning) view into a string, consiting of a `start` pointer and `length`.
+struct lxl_string_view {
+    const char *start;
+    ptrdiff_t length;
+};
+
+// A single UTF-8 codepoint.
+typedef uint32_t lxl_unicode_codepoint;
+
+// Error codes for Unicode functions.
+enum lxl_unicode_error {
+    LXL_UNIERR_OK = 0,
+    LXL_UNIERR_UNEXPECTED_EOF,          // Unexpected end of input (possibly in multibyte sequence).
+    LXL_UNIERR_INVALID_FIRST_BYTE,      // Invalid first byte for UTF-8 sequence.
+    LXL_UNIERR_INVALID_CONT_BYTE,       // Invalid continuation byte
+    LXL_UNIERR_UNEXPECTED_CONT_BYTE,    // Continuation byte at start of input.
+    LXL_UNIERR_MISSING_CONT_BYTE,       // Missing continuation byte(s) before start of next sequence.
+    LXL_UNIERR_OUT_OF_RANGE,            // Value correctly encoded but outside of Unicode range.
+    LXL_UNIERR_OVERLONG_ENCODING,       // Encoding is longer than necessary, possibly malicious.
+};
+
+// UTF-8 character stream
+struct lxl_unicode_utf8_stream {
+    struct lxl_string_view buffer;      // The backing buffer containing the characters for the stream.
+    ptrdiff_t cursor;                   // The current position in the stream.
+    enum lxl_unicode_error error;       // The latest error, cleared/set when the stream is advanced.
+};
+
+
+// END LEXEL ADDITIONAL.
+
+
 // LEXEL CORE.
 
 // These are the core definitions for lexel -- the lexer and token.
@@ -154,14 +192,12 @@ struct lxl_token {
 // The main lexer object.
 struct lxl_lexer {
     // Lexer state.
-    enum lxl_lexer_status status;   // Current status of the lexer.
-    enum lxl_lex_error error;       // Error code set to the current lexing error.
-    const char *start;              // The start of the lexer's source code.
-    const char *end;                // The end of the lexer's source code.
-    const char *current;            // Pointer to the current character.
-    const char *line_start;         // Pointer to the beginning of the current line.
-    int line;                       // The current line number.
-    struct lxl_token token;         // The next token to be emitted.
+    enum lxl_lexer_status status;           // Current status of the lexer.
+    enum lxl_lex_error error;               // Error code set to the current lexing error.
+    struct lxl_unicode_utf8_stream stream;  // Source code stream.
+    const char *line_start;                 // Pointer to the beginning of the current line.
+    int line;                               // The current line number.
+    struct lxl_token token;                 // The next token to be emitted.
 
     // Query functions (determine token type).
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
@@ -203,43 +239,6 @@ struct lxl_lexer {
 };
 
 // END LEXEL CORE.
-
-
-// LEXEL ADDITIONAL.
-
-// Additional definitions beyond the core above.
-
-// A string view.
-// This is a read-only (non-owning) view into a string, consiting of a `start` pointer and `length`.
-struct lxl_string_view {
-    const char *start;
-    ptrdiff_t length;
-};
-
-// A single UTF-8 codepoint.
-typedef uint32_t lxl_unicode_codepoint;
-
-// Error codes for Unicode functions.
-enum lxl_unicode_error {
-    LXL_UNIERR_OK = 0,
-    LXL_UNIERR_UNEXPECTED_EOF,          // Unexpected end of input (possibly in multibyte sequence).
-    LXL_UNIERR_INVALID_FIRST_BYTE,      // Invalid first byte for UTF-8 sequence.
-    LXL_UNIERR_INVALID_CONT_BYTE,       // Invalid continuation byte
-    LXL_UNIERR_UNEXPECTED_CONT_BYTE,    // Continuation byte at start of input.
-    LXL_UNIERR_MISSING_CONT_BYTE,       // Missing continuation byte(s) before start of next sequence.
-    LXL_UNIERR_OUT_OF_RANGE,            // Value correctly encoded but outside of Unicode range.
-    LXL_UNIERR_OVERLONG_ENCODING,       // Encoding is longer than necessary, possibly malicious.
-};
-
-// UTF-8 character stream
-struct lxl_unicode_utf8_stream {
-    struct lxl_string_view buffer;      // The backing buffer containing the characters for the stream.
-    ptrdiff_t cursor;                   // The current position in the stream.
-    enum lxl_unicode_error error;       // The latest error, cleared/set when the stream is advanced.
-};
-
-
-// END LEXEL ADDITIONAL.
 
 
 // LEXEL MAGIC VALUES (MVs).
