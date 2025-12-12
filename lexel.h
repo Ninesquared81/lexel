@@ -52,7 +52,8 @@
 
 // META-DEFINITIONS.
 
-// These definitions are not part of the lexel interface per se, but have special signficance within this file.
+// These definitions are not part of the lexel interface per se, but have special signficance
+// within this file.
 
 // LXL_ASSERT() is lexel's library assertion macro. It should not be directly customised.
 // Use LXL_ASSERT_MACRO and LXL_NO_ASSERT to cusomise instead.
