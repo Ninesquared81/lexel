@@ -97,7 +97,7 @@ enum lxl_unicode_error {
 };
 
 // UTF-8 character stream
-struct lxl_unicode_utf8_stream {
+struct lxl_utf8_stream {
     struct lxl_string_view buffer;      // The backing buffer containing the characters for the stream.
     ptrdiff_t cursor;                   // The current position in the stream.
     enum lxl_unicode_error error;       // The latest error, cleared/set when the stream is advanced.
@@ -196,7 +196,7 @@ struct lxl_lexer {
     // Lexer state.
     enum lxl_lexer_status status;           // Current status of the lexer.
     enum lxl_lex_error error;               // Error code set to the current lexing error.
-    struct lxl_unicode_utf8_stream stream;  // Source code stream.
+    struct lxl_utf8_stream stream;          // Source code stream.
     const char *line_start;                 // Pointer to the beginning of the current line.
     int line;                               // The current line number.
     struct lxl_token token;                 // The next token to be emitted.
@@ -361,16 +361,16 @@ struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_
 // These functions are for working with Unicode/UTF-8, which is what lexel expects.
 
 // Get the tail (unconsumed characters) of a UTF-8 stream as a string view.
-struct lxl_string_view lxl_unicode_utf8_stream_tail(const struct lxl_unicode_utf8_stream *stream);
+struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream);
 
 // Return whether or not the stream is exhausted.
-bool lxl_unicode_utf8_stream_is_finished(const struct lxl_unicode_utf8_stream *stream);
+bool lxl_utf8_stream_is_finished(const struct lxl_utf8_stream *stream);
 
 // Count the number of leading ones in a byte.
 int lxl_count_leading_ones(uint8_t byte);
 
 // Get the (minimum) number of characters needed to encode a codepoint value in UTF-8.
-int lxl_unicode_get_utf8_length(lxl_unicode_codepoint value);
+int lxl_get_utf8_length(lxl_unicode_codepoint value);
 
 // Decode the next UTF-8 character in a stream, advance the stream, and return the character that was read.
 // The error status is set or cleared based on the first error encuntered during decoding.
@@ -378,7 +378,7 @@ int lxl_unicode_get_utf8_length(lxl_unicode_codepoint value);
 // If either of the errors LXL_UNIERR_OUT_OF_RANGE or LXL_UNIERR_OVERLONG_ENCODING are encountered,
 // the decoded value is still returned (although the error status is set appropriately). On any
 // other error, a value of 0 is returned
-lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stream);
+lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_utf8_stream *stream);
 
 // END UNICODE INTERFACE.
 

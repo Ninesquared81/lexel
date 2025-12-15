@@ -6,7 +6,7 @@
 
 lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
-    if (lxl_unicode_utf8_stream_is_finished(lexer)) {
+    if (lxl_utf8_stream_is_finished(lexer)) {
         lexer->status = LXL_LSTS_FINISHED;
     }
     lxl_unicode_codepoint next = lxl_unicode_next_utf8(&lexer->stream);
@@ -35,8 +35,8 @@ void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {
     if (lxl_lexer_is_finished(lexer)) return false;
     lxl_unicode_codepoint lexer_next = lxl_lexer__advance();
-    struct lxl_unicode_utf8_stream chars_stream = {.buffer = chars};
-    while (!lxl_unicode_utf8_stream_is_finished(&chars_stream)) {
+    struct lxl_utf8_stream chars_stream = {.buffer = chars};
+    while (!lxl_utf8_stream_is_finished(&chars_stream)) {
         lxl_unicode_codepoint chars_next = lxl_unicode_next_utf8(&chars_stream);
         if (chars_next == lexer_next) return true;
     }
@@ -47,9 +47,9 @@ bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view char
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string) {
     if (lxl_lexer_is_finished(lexer)) return false;
     struct lxl_lexer old_state = *lexer;
-    struct lxl_unicode_utf8_stream string_stream = {.buffer = string};
-    while (!lxl_unicode_utf8_stream_is_finished(&string_stream)) {
-        if (lxl_unicode_utf8_stream_is_finished(&lexer_stream_copy)) goto fail;
+    struct lxl_utf8_stream string_stream = {.buffer = string};
+    while (!lxl_utf8_stream_is_finished(&string_stream)) {
+        if (lxl_utf8_stream_is_finished(&lexer_stream_copy)) goto fail;
         lxl_unicode_codepoint lexer_char = lxl_lexer__advance(lexer);
         lxl_unicode_codepoint string_char = lxl_unicode_next_utf8(&string_stream);
         if (string_stream.error) {
@@ -149,12 +149,12 @@ struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_
 
 // UNICODE INTERFACE.
 
-struct lxl_string_view lxl_unicode_utf8_stream_tail(const struct lxl_unicode_utf8_stream *stream) {
+struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream) {
     LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
     return lxl_sv_slice_end(stream->buffer, stream->cursor);
 }
 
-bool lxl_unicode_utf8_stream_is_finished(const struct lxl_unicode_utf8_stream *stream) {
+bool lxl_utf8_stream_is_finished(const struct lxl_utf8_stream *stream) {
     return stream->cursor >= stream->buffer.length;
 }
 
@@ -166,16 +166,16 @@ int lxl_count_leading_ones(uint8_t byte) {
     return count;
 }
 
-int lxl_unicode_get_utf8_length(lxl_unicode_codepoint value) {
+int lxl_get_utf8_length(lxl_unicode_codepoint value) {
     if (value <= 0x7F) return 1;
     if (value <= 0x7FF) return 2;
     if (value <= 0xFFFF) return 3;
     return 4;
 }
 
-lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stream) {
+lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_utf8_stream *stream) {
     stream->error = LXL_UNIERR_OK;
-    if (lxl_unicode_utf8_stream_is_finished(stream)) {
+    if (lxl_utf8_stream_is_finished(stream)) {
         stream->error = LXL_UNIERR_UNEXPECTED_EOF;
         return 0;
     }
@@ -195,7 +195,7 @@ lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stre
     unsigned mask = (1 << (8 - n_ones)) - 1;
     lxl_unicode_codepoint value = first_byte & mask;
     for (int i = 0; i < n_cont_bytes; ++i) {
-        if (lxl_unicode_utf8_stream_is_finished(stream)) {
+        if (lxl_utf8_stream_is_finished(stream)) {
             stream->error = LXL_UNIERR_UNEXPECTED_EOF;
             return 0;
         }
@@ -221,7 +221,7 @@ lxl_unicode_codepoint lxl_unicode_next_utf8(struct lxl_unicode_utf8_stream *stre
         // Outside of valid Unicode range.
         stream->error = LXL_UNIERR_OUT_OF_RANGE;
     }
-    else if (lxl_unicode_get_utf8_length(value) < 1 + n_cont_bytes) {
+    else if (lxl_get_utf8_length(value) < 1 + n_cont_bytes) {
         // Overlong encoding.
         stream->error = LXL_UNIERR_OVERLONG_ENCODING;
     }
