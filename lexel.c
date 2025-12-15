@@ -2,6 +2,70 @@
 
 #include "lexel.h"
 
+// LEXER INTERFACE.
+
+lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
+    if (lxl_lexer_is_finished(lexer)) return 0;
+    if (lxl_unicode_utf8_stream_is_finished(lexer)) {
+        lexer->status = LXL_LSTS_FINISHED;
+    }
+    lxl_unicode_codepoint next = lxl_unicode_next_utf8(&lexer->stream);
+    if (lexer->stream.error) lexer->error = LXL_LERR_UNICODE;
+    if (next == '\n') ++lexer->line;
+    return next;
+}
+
+void lxl_lexer__rewind(struct lxl_lexer *lexer) {
+    // TODO: rewind utf8 streams.
+}
+
+void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
+    const char *start = &lexer->stream.buffer.start;
+    for (const char *seek = start; seek != start && *seek != '\n'; --seek) {
+        /* Do nothing. */
+    }
+    if (seek == start) {
+        LXL_ASSERT(lexer->line == 1);
+        lexer->stream.cursor = 0;
+        return;
+    }
+    lexer->cursor = seek - start + 1;  // +1 to be first index AFTER newline.
+}
+
+bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {
+    if (lxl_lexer_is_finished(lexer)) return false;
+    lxl_unicode_codepoint lexer_next = lxl_lexer__advance();
+    struct lxl_unicode_utf8_stream chars_stream = {.buffer = chars};
+    while (!lxl_unicode_utf8_stream_is_finished(&chars_stream)) {
+        lxl_unicode_codepoint chars_next = lxl_unicode_next_utf8(&chars_stream);
+        if (chars_next == lexer_next) return true;
+    }
+    lxl_lexer__rewind();
+    return false;
+}
+
+bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string) {
+    if (lxl_lexer_is_finished(lexer)) return false;
+    struct lxl_lexer old_state = *lexer;
+    struct lxl_unicode_utf8_stream string_stream = {.buffer = string};
+    while (!lxl_unicode_utf8_stream_is_finished(&string_stream)) {
+        if (lxl_unicode_utf8_stream_is_finished(&lexer_stream_copy)) goto fail;
+        lxl_unicode_codepoint lexer_char = lxl_lexer__advance(lexer);
+        lxl_unicode_codepoint string_char = lxl_unicode_next_utf8(&string_stream);
+        if (string_stream.error) {
+
+        }
+        if (lexer_char != string_char) goto fail;
+    }
+    return true;
+fail:
+    *lexer = old_state;
+    return false
+}
+
+// END LEXER INTERFACE.
+
+
 // TOKEN INTERFACE.
 
 struct lxl_string_view lxl_token_value(struct lxl_token token) {

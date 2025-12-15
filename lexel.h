@@ -150,6 +150,7 @@ enum lxl_lex_error {
     LXL_LERR_UNCLOSED_STRING = -19,   // A string-like literal had no closing delimiter before the end.
     LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
     LXL_LERR_INVALID_FLOAT = -21,     // A floating-point literal was invalid.
+    LXL_LERR_UNICODE = -22,           // A Unicode error.
 };
 
 // Lexer status.
