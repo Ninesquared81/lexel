@@ -228,4 +228,22 @@ lxl_unicode_codepoint lxl_utf8_stream_next(struct lxl_utf8_stream *stream) {
     return value;
 }
 
+bool lxl_utf8_stream_back(struct lxl_utf8_stream *stream) {
+    stream->error = LXL_UNIERR_OK;
+    int n_cont_bytes = 0;
+    for (; lxl_count_leading_ones(stream->buffer[stream->cursor]) == 1; --stream->cursor) {
+        ++n_cont_bytes;
+        if (stream->cursor <= 0) {
+            stream->error = LXL_UNIERR_UNEXPECTED_EOF;
+            return false;
+        }
+    }
+    --stream->cursor;
+    if (n_cont_bytes > 3) {
+        stream->error = LXL_UNIERR_INVALID_CONT_BYTE;
+        return false;
+    }
+    return true;
+}
+
 // END UNICODE INTERFACE.

@@ -380,6 +380,9 @@ int lxl_get_utf8_length(lxl_unicode_codepoint value);
 // other error, a value of 0 is returned
 lxl_unicode_codepoint lxl_utf8_stream_next(struct lxl_utf8_stream *stream);
 
+// Rewind a UTF-8 stream by one codepoint. Returns false on error, true otherwise.
+bool lxl_utf8_stream_back(struct lxl_utf8_stream *stream);
+
 // END UNICODE INTERFACE.
 
 
