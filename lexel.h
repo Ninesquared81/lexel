@@ -25,6 +25,32 @@
  *
  */
 
+
+// A note on TERMINOLOGY:
+// In the definitions below, certain terminology is used in a standardised manner.
+// For brevity, the doc-comments for each function, etc., will NOT explain the meaning
+// of these terms, so their defintions are listed here.
+
+// MATCH_x functions:
+// These functions conditionally consume characters in the lexer based on some pattern
+// or attribute, returning `true` if a match was found and `false` otherwise (i.e. whether
+// or not characters were consumed).
+
+// x_HOOK functions:
+// These are optional functions called at specific points in the lexing process. The exact
+// point in time when a particular hook is called is encoded in its name. For example, the
+// `after_token_hook()` is called at the very end of lexing, just before the token is
+// returned to the caller.
+// Hook functions have full access to the lexer's internal state at their specific time, and
+// can even modify this state, allowing for fine-grained control over the lexing process.
+
+// WORDs:
+// A word is generally either an identifier or keyword. Depending on the language, words may
+// include symbolic characters such as `-` or `_`, or may consist of only alphanumeric (or
+// even just alphabetic) characters.
+
+
+
 #ifndef LEXEL_H
 #define LEXEL_H
 
@@ -110,30 +136,6 @@ struct lxl_utf8_stream {
 // LEXEL CORE.
 
 // These are the core definitions for lexel -- the lexer and token.
-
-
-// A note on TERMINOLOGY:
-// In the definitions below, certain terminology is used in a standardised manner.
-// For brevity, the doc-comments for each function, etc., will NOT explain the meaning
-// of these terms, so their defintions are listed here.
-
-// MATCH_x functions:
-// These functions conditionally consume characters in the lexer based on some pattern
-// or attribute, returning `true` if a match was found and `false` otherwise (i.e. whether
-// or not characters were consumed).
-
-// x_HOOK functions:
-// These are optional functions called at specific points in the lexing process. The exact
-// point in time when a particular hook is called is encoded in its name. For example, the
-// `after_token_hook()` is called at the very end of lexing, just before the token is
-// returned to the caller.
-// Hook functions have full access to the lexer's internal state at their specific time, and
-// can even modify this state, allowing for fine-grained control over the lexing process.
-
-// WORDs:
-// A word is generally either an identifier or keyword. Depending on the language, words may
-// include symbolic characters such as `-` or `_`, or may consist of only alphanumeric (or
-// even just alphabetic) characters.
 
 
 // The line and column position with text.
