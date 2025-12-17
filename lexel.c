@@ -16,7 +16,12 @@ lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
 }
 
 void lxl_lexer__rewind(struct lxl_lexer *lexer) {
-    // TODO: rewind utf8 streams.
+    if (!lxl_utf8_stream_back(lexer)) {
+        lexer->error = LXL_LERR_UNICODE;
+    }
+    if (lexer->stream.buffer[lexer->stream.cursor] == '\n') {
+        --lexer->line;
+    }
 }
 
 void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
