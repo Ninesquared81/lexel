@@ -288,6 +288,12 @@ void lxl_lexer__rewind(struct lxl_lexer *lexer);
 // Rewind to the start of the current line.
 void lxl_lexer__reset_line(struct lxl_lexer *lexer);
 
+// Get a pointer to the start of the current line.
+const char *lxl_lexer__seek_line_start(struct lxl_lexer *lexer);
+
+// Get the distance from the start of the current line.
+int lxl_lexer__get_column(struct lxl_lexer *lexer);
+
 // Match one of a set of characters.
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars);
 

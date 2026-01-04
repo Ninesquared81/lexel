@@ -21,6 +21,7 @@ void lxl_lexer__rewind(struct lxl_lexer *lexer) {
     }
     if (lexer->stream.buffer[lexer->stream.cursor] == '\n') {
         --lexer->line;
+        lexer->line_start = lxl_lexer__seek_line_start(lexer);
     }
 }
 
@@ -35,6 +36,21 @@ void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
         return;
     }
     lexer->cursor = seek - start + 1;  // +1 to be first index AFTER newline.
+}
+
+const char *lxl_lexer__seek_line_start(struct lxl_lexer *lexer) {
+    int cursor = lexer->stream.cursor - 1;
+    while (cursor >= 0 && lexer->stream.buffer[cursor] != '\n') {
+        --cursor;
+    }
+    LXL_ASSERT(cursor + 1 >= 0);
+    // Return address of byte one after the previous newline.
+    return &lexer->stream[cursor + 1];
+}
+
+int lxl_lexer__get_column(struct lxl_lexer *lexer) {
+    const char *stream_position = lxl_utf8_stream_poition(lexer->stream);
+    return stream_position - lexer->line_start;
 }
 
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {
