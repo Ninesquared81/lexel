@@ -154,6 +154,10 @@ struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_
 
 // UNICODE INTERFACE.
 
+const char *lxl_utf8_stream_position(const struct lxl_utf8_stream *stream) {
+    return &stream->buffer[stream->cursor];
+}
+
 struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream) {
     LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
     return lxl_sv_slice_end(stream->buffer, stream->cursor);

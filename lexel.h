@@ -362,6 +362,9 @@ struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_
 
 // These functions are for working with Unicode/UTF-8, which is what lexel expects.
 
+// Get a pointer to the current position in a UTF-8 stream.
+const char *lxl_utf8_stream_position(const struct lxl_utf8_stream *stream);
+
 // Get the tail (unconsumed characters) of a UTF-8 stream as a string view.
 struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream);
 
