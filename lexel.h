@@ -389,10 +389,10 @@ int lxl_get_utf8_length(lxl_unicode_codepoint value);
 // If either of the errors LXL_UNIERR_OUT_OF_RANGE or LXL_UNIERR_OVERLONG_ENCODING are encountered,
 // the decoded value is still returned (although the error status is set appropriately). On any
 // other error, a value of 0 is returned
-lxl_unicode_codepoint lxl_utf8_stream_next(struct lxl_utf8_stream *stream);
+lxl_unicode_codepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream);
 
 // Rewind a UTF-8 stream by one codepoint. Returns false on error, true otherwise.
-bool lxl_utf8_stream_back(struct lxl_utf8_stream *stream);
+bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream);
 
 // END UNICODE INTERFACE.
 

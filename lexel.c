@@ -9,14 +9,14 @@ lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_utf8_stream_is_finished(lexer)) {
         lexer->status = LXL_LSTS_FINISHED;
     }
-    lxl_unicode_codepoint next = lxl_utf8_stream_next(&lexer->stream);
+    lxl_unicode_codepoint next = lxl_utf8_stream_advance(&lexer->stream);
     if (lexer->stream.error) lexer->error = LXL_LERR_UNICODE;
     if (next == '\n') ++lexer->line;
     return next;
 }
 
 void lxl_lexer__rewind(struct lxl_lexer *lexer) {
-    if (!lxl_utf8_stream_back(lexer)) {
+    if (!lxl_utf8_stream_rewind(lexer)) {
         lexer->error = LXL_LERR_UNICODE;
     }
     if (lexer->stream.buffer[lexer->stream.cursor] == '\n') {
@@ -58,7 +58,7 @@ bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view char
     lxl_unicode_codepoint lexer_next = lxl_lexer__advance();
     struct lxl_utf8_stream chars_stream = {.buffer = chars};
     while (!lxl_utf8_stream_is_finished(&chars_stream)) {
-        lxl_unicode_codepoint chars_next = lxl_utf8_stream_next(&chars_stream);
+        lxl_unicode_codepoint chars_next = lxl_utf8_stream_advance(&chars_stream);
         if (chars_next == lexer_next) return true;
     }
     lxl_lexer__rewind();
@@ -72,7 +72,7 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
     while (!lxl_utf8_stream_is_finished(&string_stream)) {
         if (lxl_utf8_stream_is_finished(&lexer_stream_copy)) goto fail;
         lxl_unicode_codepoint lexer_char = lxl_lexer__advance(lexer);
-        lxl_unicode_codepoint string_char = lxl_utf8_stream_next(&string_stream);
+        lxl_unicode_codepoint string_char = lxl_utf8_stream_advance(&string_stream);
         if (string_stream.error) {
 
         }
@@ -198,7 +198,7 @@ int lxl_get_utf8_length(lxl_unicode_codepoint value) {
     return 4;
 }
 
-lxl_unicode_codepoint lxl_utf8_stream_next(struct lxl_utf8_stream *stream) {
+lxl_unicode_codepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream) {
     stream->error = LXL_UNIERR_OK;
     if (lxl_utf8_stream_is_finished(stream)) {
         stream->error = LXL_UNIERR_UNEXPECTED_EOF;
@@ -253,7 +253,7 @@ lxl_unicode_codepoint lxl_utf8_stream_next(struct lxl_utf8_stream *stream) {
     return value;
 }
 
-bool lxl_utf8_stream_back(struct lxl_utf8_stream *stream) {
+bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream) {
     stream->error = LXL_UNIERR_OK;
     int n_cont_bytes = 0;
     for (; lxl_count_leading_ones(stream->buffer[stream->cursor]) == 1; --stream->cursor) {
