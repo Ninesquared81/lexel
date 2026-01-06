@@ -4,6 +4,10 @@
 
 // LEXER INTERFACE.
 
+bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
+    return lexer->status == LXL_LSTS_FINISHED || lexer->status == LXL_LSTS_FINISHED_ABNORMAL;
+}
+
 lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
     if (lxl_utf8_stream_is_finished(&lexer->stream)) {
