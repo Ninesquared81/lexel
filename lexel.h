@@ -57,6 +57,7 @@
 #include <assert.h>     // assert(), static_assert()  -- requires C11
 #include <stdbool.h>    // bool, false, true -- requires C99
 #include <stddef.h>     // ptrdiff_t
+#include <stdint.h>     // int32_t, uint8_t.
 
 // CUSTOMISATION OPTIONS.
 
@@ -216,7 +217,7 @@ struct lxl_lexer {
     // -- Default: always return false.
     bool (*match_float_digit)(struct lxl_lexer *self);      // Match a single floating-point digit.
     // -- Default: forward to `.match_integer_digit()`.
-    bool (*match_punct_char)(stuct lxl_lexer *self);        // Match a single punctuation character.
+    bool (*match_punct_char)(struct lxl_lexer *self);       // Match a single punctuation character.
     // -- Default: always return false.
     int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
     int (*get_int_type)(struct lxl_lexer *self);
@@ -278,6 +279,9 @@ enum lxl__token_mvs {
 
 
 // LEXER INTERFACE.
+
+// Return whether the lexer has reached the end of its input.
+bool lxl_lexer_is_finished(struct lxl_lexer *lexer);
 
 // Advance the lexer by a single character and return the codepoint.
 lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer);
@@ -353,13 +357,13 @@ bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t i
 bool lxl_sv_index_in_proper_range(const struct lxl_string_view *sv, ptrdiff_t index);
 
 // Return a slice of the string view in the range from ..< to.
-struct string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to);
+struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to);
 
 // Return a slice from the given index up to the end of a string view (from ..< sv.length).
-struct string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from);
+struct lxl_string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from);
 
 // Return a slice from the start of a string view up to the given index (0 ..< to).
-struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_t to);
+struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrdiff_t to);
 
 // END STRING VIEW INTERFACE.
 

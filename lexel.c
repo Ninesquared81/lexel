@@ -6,7 +6,7 @@
 
 lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
-    if (lxl_utf8_stream_is_finished(lexer)) {
+    if (lxl_utf8_stream_is_finished(&lexer->stream)) {
         lexer->status = LXL_LSTS_FINISHED;
     }
     lxl_unicode_codepoint next = lxl_utf8_stream_advance(&lexer->stream);
@@ -16,52 +16,43 @@ lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
 }
 
 void lxl_lexer__rewind(struct lxl_lexer *lexer) {
-    if (!lxl_utf8_stream_rewind(lexer)) {
+    if (!lxl_utf8_stream_rewind(&lexer->stream)) {
         lexer->error = LXL_LERR_UNICODE;
     }
-    if (lexer->stream.buffer[lexer->stream.cursor] == '\n') {
+    if (lexer->stream.buffer.start[lexer->stream.cursor] == '\n') {
         --lexer->line;
         lexer->line_start = lxl_lexer__seek_line_start(lexer);
     }
 }
 
 void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
-    const char *start = &lexer->stream.buffer.start;
-    for (const char *seek = start; seek != start && *seek != '\n'; --seek) {
-        /* Do nothing. */
-    }
-    if (seek == start) {
-        LXL_ASSERT(lexer->line == 1);
-        lexer->stream.cursor = 0;
-        return;
-    }
-    lexer->cursor = seek - start + 1;  // +1 to be first index AFTER newline.
+    lxl_lexer__seek_line_start(lexer);
 }
 
 const char *lxl_lexer__seek_line_start(struct lxl_lexer *lexer) {
     int cursor = lexer->stream.cursor - 1;
-    while (cursor >= 0 && lexer->stream.buffer[cursor] != '\n') {
+    while (cursor >= 0 && lexer->stream.buffer.start[cursor] != '\n') {
         --cursor;
     }
     LXL_ASSERT(cursor + 1 >= 0);
     // Return address of byte one after the previous newline.
-    return &lexer->stream[cursor + 1];
+    return &lexer->stream.buffer.start[cursor + 1];
 }
 
 int lxl_lexer__get_column(struct lxl_lexer *lexer) {
-    const char *stream_position = lxl_utf8_stream_poition(lexer->stream);
+    const char *stream_position = lxl_utf8_stream_position(&lexer->stream);
     return stream_position - lexer->line_start;
 }
 
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {
     if (lxl_lexer_is_finished(lexer)) return false;
-    lxl_unicode_codepoint lexer_next = lxl_lexer__advance();
+    lxl_unicode_codepoint lexer_next = lxl_lexer__advance(lexer);
     struct lxl_utf8_stream chars_stream = {.buffer = chars};
     while (!lxl_utf8_stream_is_finished(&chars_stream)) {
         lxl_unicode_codepoint chars_next = lxl_utf8_stream_advance(&chars_stream);
         if (chars_next == lexer_next) return true;
     }
-    lxl_lexer__rewind();
+    lxl_lexer__rewind(lexer);
     return false;
 }
 
@@ -70,18 +61,17 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
     struct lxl_lexer old_state = *lexer;
     struct lxl_utf8_stream string_stream = {.buffer = string};
     while (!lxl_utf8_stream_is_finished(&string_stream)) {
-        if (lxl_utf8_stream_is_finished(&lexer_stream_copy)) goto fail;
         lxl_unicode_codepoint lexer_char = lxl_lexer__advance(lexer);
         lxl_unicode_codepoint string_char = lxl_utf8_stream_advance(&string_stream);
         if (string_stream.error) {
-
+            // LXL_TODO("error in match string");
         }
         if (lexer_char != string_char) goto fail;
     }
     return true;
 fail:
     *lexer = old_state;
-    return false
+    return false;
 }
 
 // END LEXER INTERFACE.
@@ -117,16 +107,16 @@ struct lxl_string_view lxl_sv_from_cstring(const char *string) {
 struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length) {
     LXL_ASSERT(length >= 0);
     return (struct lxl_string_view) {
-        .start = start;
-        .length = length;
+        .start = start,
+        .length = length,
     };
 }
 
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) {
     LXL_ASSERT(start <= end);
     return (struct lxl_string_view) {
-        .start = start;
-        .length = end - start;
+        .start = start,
+        .length = end - start,
     };
 }
 
@@ -137,18 +127,18 @@ const char *lxl_sv_end(const struct lxl_string_view *sv) {
 ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index) {
     if (index < 0) index += sv->length;
     if (index < 0) index = 0;
-    if (index > sv.length) index = sv->length;
+    if (index > sv->length) index = sv->length;
 }
 
 bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t index) {
-    return 0 <= index && index <= sv.length;
+    return 0 <= index && index <= sv->length;
 }
 
 bool lxl_sv_index_in_proper_range(const struct lxl_string_view *sv, ptrdiff_t index) {
-    return 0 <= index && index < sv.length;
+    return 0 <= index && index < sv->length;
 }
 
-struct string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to) {
+struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to) {
     from = lxl_sv_normalise_index(sv, from);
     to = lxl_sv_normalise_index(sv, to);
     ptrdiff_t length = to - from;
@@ -156,11 +146,11 @@ struct string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from
     return lxl_sv_from_startlen(&sv->start[from], length);
 }
 
-struct string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from) {
+struct lxl_string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from) {
     return lxl_sv_slice(sv, from, sv->length);
 }
 
-struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_t to) {
+struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrdiff_t to) {
     return lxl_sv_slice(sv, 0, to);
 }
 
@@ -171,12 +161,12 @@ struct string_view lxl_sv_slice_start(const struct lxl_strign_view *sv, ptrdiff_
 // UNICODE INTERFACE.
 
 const char *lxl_utf8_stream_position(const struct lxl_utf8_stream *stream) {
-    return &stream->buffer[stream->cursor];
+    return &stream->buffer.start[stream->cursor];
 }
 
 struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream) {
     LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
-    return lxl_sv_slice_end(stream->buffer, stream->cursor);
+    return lxl_sv_slice_end(&stream->buffer, stream->cursor);
 }
 
 bool lxl_utf8_stream_is_finished(const struct lxl_utf8_stream *stream) {
@@ -237,7 +227,7 @@ lxl_unicode_codepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream) {
             continue;
         }
         value <<= 6;
-        value ||= cont_byte & 0x3F;
+        value |= cont_byte & 0x3F;
     }
     if (stream->error) {
         return 0;
@@ -256,7 +246,7 @@ lxl_unicode_codepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream) {
 bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream) {
     stream->error = LXL_UNIERR_OK;
     int n_cont_bytes = 0;
-    for (; lxl_count_leading_ones(stream->buffer[stream->cursor]) == 1; --stream->cursor) {
+    for (; lxl_count_leading_ones(stream->buffer.start[stream->cursor]) == 1; --stream->cursor) {
         ++n_cont_bytes;
         if (stream->cursor <= 0) {
             stream->error = LXL_UNIERR_UNEXPECTED_EOF;
