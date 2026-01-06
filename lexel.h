@@ -110,7 +110,7 @@ struct lxl_string_view {
     ptrdiff_t length;
 };
 
-// A single UTF-8 codepoint.
+// A single Unicode codepoint.
 typedef uint32_t lxl_unicode_codepoint;
 
 // Error codes for Unicode functions.
