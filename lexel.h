@@ -94,6 +94,8 @@
 // If the assertion fires, it suggests a bug in lexel itself.
 #define LXL_UNREACHABLE() LXL_ASSERT(0 && "Unreachable. This may be a bug in lexel.")
 
+#define LXL_TODO(TASK) LXL_ASSERT(0 && "TODO: " TASK)
+
 // END META-DEFINITIONS.
 
 
