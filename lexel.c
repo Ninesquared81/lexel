@@ -68,7 +68,7 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
         lxl_unicode_codepoint lexer_char = lxl_lexer__advance(lexer);
         lxl_unicode_codepoint string_char = lxl_utf8_stream_advance(&string_stream);
         if (string_stream.error) {
-            // LXL_TODO("error in match string");
+            LXL_TODO("error in match string");
         }
         if (lexer_char != string_char) goto fail;
     }
