@@ -54,7 +54,7 @@
 #ifndef LEXEL_H
 #define LEXEL_H
 
-#include <assert.h>     // assert(), static_assert()  -- requires C11
+#include <assert.h>     // assert()
 #include <stdbool.h>    // bool, false, true -- requires C99
 #include <stddef.h>     // ptrdiff_t
 #include <stdint.h>     // int32_t, uint8_t.
