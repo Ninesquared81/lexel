@@ -111,7 +111,7 @@ struct lxl_string_view {
 };
 
 // A single Unicode codepoint.
-typedef uint32_t lxl_unicode_codepoint;
+typedef uint32_t lxl_UnicodeCodepoint;
 
 // Error codes for Unicode functions.
 enum lxl_unicode_error {
@@ -286,7 +286,7 @@ enum lxl__token_mvs {
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer);
 
 // Advance the lexer by a single character and return the codepoint.
-lxl_unicode_codepoint lxl_lexer__advance(struct lxl_lexer *lexer);
+lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
 
 // Rewind the lexer by a single character.
 void lxl_lexer__rewind(struct lxl_lexer *lexer);
@@ -387,7 +387,7 @@ bool lxl_utf8_stream_is_finished(const struct lxl_utf8_stream *stream);
 int lxl_count_leading_ones(uint8_t byte);
 
 // Get the (minimum) number of characters needed to encode a codepoint value in UTF-8.
-int lxl_get_utf8_length(lxl_unicode_codepoint value);
+int lxl_get_utf8_length(lxl_UnicodeCodepoint value);
 
 // Decode the next UTF-8 character in a stream, advance the stream, and return the character that was read.
 // The error status is set or cleared based on the first error encuntered during decoding.
@@ -395,7 +395,7 @@ int lxl_get_utf8_length(lxl_unicode_codepoint value);
 // If either of the errors LXL_UNIERR_OUT_OF_RANGE or LXL_UNIERR_OVERLONG_ENCODING are encountered,
 // the decoded value is still returned (although the error status is set appropriately). On any
 // other error, a value of 0 is returned
-lxl_unicode_codepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream);
+lxl_UnicodeCodepoint lxl_utf8_stream_advance(struct lxl_utf8_stream *stream);
 
 // Rewind a UTF-8 stream by one codepoint. Returns false on error, true otherwise.
 bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream);
