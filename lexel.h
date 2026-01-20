@@ -158,24 +158,6 @@ enum lxl_lex_error {
     LXL_LERR_UNICODE = -22,           // A Unicode error.
 };
 
-// Lexer status.
-enum lxl_lexer_status {
-    LXL_LSTS_READY,                // Ready to lex next token.
-    LXL_LSTS_SKIPPING_WHITESPACE,  // Skipping whitespace (and comments).
-    LXL_LSTS_LEX_START,            // Lexing has begun.
-    LXL_LSTS_LEXING_STRING,        // Lexing a string-like literal token.
-    LXL_LSTS_FAIL_LEX_STRING,      // Failed to lex a string.
-    LXL_LSTS_LEXING_INTEGER,       // Lexing an integer literal token.
-    LXL_LSTS_FAIL_LEX_INTEGER,     // Failed to lex an integer.
-    LXL_LSTS_LEXING_FLOAT,         // Lexing a floating-point literal token.
-    LXL_LSTS_FAIL_LEX_FLOAT,       // Failed to lex a float.
-    LXL_LSTS_LEXING_WORD,          // Lexing a word token.
-    LXL_LSTS_FAIL_LEX_WORD,        // Failed to lex a word.
-    LXL_LSTS_LEX_END,              // Token has been fully lexed.
-    LXL_LSTS_FINISHED,             // Reached the end of tokens.
-    LXL_LSTS_FINISHED_ABNORMAL,    // Reached the end of tokens abnormally.
-};
-
 // A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
 struct lxl_delim_pair {
     struct lxl_string_view opener;
@@ -199,12 +181,12 @@ struct lxl_token {
 // The main lexer object.
 struct lxl_lexer {
     // Lexer state.
-    enum lxl_lexer_status status;           // Current status of the lexer.
-    enum lxl_lex_error error;               // Error code set to the current lexing error.
     struct lxl_utf8_stream stream;          // Source code stream.
-    const char *line_start;                 // Pointer to the beginning of the current line.
-    int line;                               // The current line number.
     struct lxl_token token;                 // The next token to be emitted.
+    const char *line_start;                 // Pointer to the beginning of the current line.
+    enum lxl_lex_error error;               // Error code set to the current lexing error.
+    int line;                               // The current line number.
+    bool is_finished;                       // Flag set when the lexer has no more (non-end) tokens to emit.
 
     // Query functions (determine token type).
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
@@ -255,7 +237,7 @@ struct lxl_lexer {
 enum lxl__token_mvs {
     LXL_TOKENS_END = -1,           // Special token type signifying the end of the token stream.
     LXL_TOKEN_UNINIT = -2,         // Special token type for a token whose type is yet to be determined.
-    LXL_TOKENS_END_ABNORMAL = -3,  // Special token type signifying an abnormal end of the token stream.
+    // LXL_TOKENS_END_ABNORMAL = -3,  // Special token type signifying an abnormal end of the token stream.
     LXL_TOKEN_LINE_ENDING = -4,    // Special token type signifying the end of a line.
     LXL_TOKEN_NO_TOKEN = -5,       // Special token type for a non-existant token.
     // See enum lxl_lex_error for token error types.
@@ -315,7 +297,7 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
 
 // Return whether `tok` is a special end-of-tokens token.
 #define LXL_TOKEN_IS_END(tok) \
-    ((tok).kind == LXL_TOKENS_END || (tok).kind == LXL_TOKENS_END_ABNORMAL)
+    ((tok).kind == LXL_TOKENS_END)
 
 // Return whether `tok` is a special error token.
 #define LXL_TOKEN_IS_ERROR(tok) ((tok).kind <= LXL_LERR_GENERIC)

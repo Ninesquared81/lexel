@@ -5,13 +5,13 @@
 // LEXER INTERFACE.
 
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
-    return lexer->status == LXL_LSTS_FINISHED || lexer->status == LXL_LSTS_FINISHED_ABNORMAL;
+    return lexer->is_finished;
 }
 
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
     if (lxl_utf8_stream_is_finished(&lexer->stream)) {
-        lexer->status = LXL_LSTS_FINISHED;
+        lexer->finished = true;
     }
     lxl_UnicodeCodepoint next = lxl_utf8_stream_advance(&lexer->stream);
     if (lexer->stream.error) lexer->error = LXL_LERR_UNICODE;
