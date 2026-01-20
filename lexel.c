@@ -2,11 +2,58 @@
 
 #include "lexel.h"
 
-// LEXER INTERFACE.
+// LEXER PUBLIC INTERFACE.
 
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
     return lexer->is_finished;
 }
+
+struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
+    if (lexer->next_state == NULL) lexer->next_state = lxl_lstate_Ready;
+    LXL_ASSERT(lexer->next_state == lxl_state_Ready && "Lexer in unexpected state.");
+    while (lexer->next_state != lxl_lstate_Return) {
+        LXL_ASSERT(lexer->next_state != NULL && "Lexer state must never be null.");
+        lexer->next_state(lexer);
+    }
+    lxl_lstate_Return(lexer);
+    return lexer->token;
+}
+
+// END_LEXER_PUBLIC_INTERFACE.
+
+
+// LEXER STATES.
+
+void lxl_lstate_Ready(struct lxl_lexer *lexer) {
+    LXL_LEXER__CALL_HOOK(lexer, before_token_hook);
+    lexer->next_state = (!lxl_lexer_is_finished(lexer))
+        ? lxl_lstate_StartNewToken
+        : lxl_lstate_EmitEndToken;
+}
+
+void lxl_lstate_BeginToken(struct lxl_lexer *lexer) {
+    LXL_ASSERT(!lxl_lexer_is_finished(lexer));
+    // lxl_lexer__skip_whitespace(lexer);
+    // lxl_lexer__begin_token(lexer, LXL_TOKEN_UNINIT);
+    lexer->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitEndToken(struct lxl_lexer *lexer) {
+    LXL_ASSERT(lxl_lexer_is_finished(lexer));
+    // lxl_lexer__begin_token(lexer, LXL_TOKENS_END);
+    lexer->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_Return(struct lxl_lexer *lexer) {
+    // lxl_lexer__finish_token(lexer);
+    LXL_LEXER__CALL_HOOK(lexer, after_token_hook);
+    lexer->next_state = lxl_lstate_Ready;
+}
+
+// END LEXER STATES.
+
+
+// LEXER INTERNAL INTERFACE.
 
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
@@ -78,7 +125,7 @@ fail:
     return false;
 }
 
-// END LEXER INTERFACE.
+// END LEXER INTERNAL INTERFACE.
 
 
 // TOKEN INTERFACE.

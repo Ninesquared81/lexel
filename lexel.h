@@ -187,6 +187,7 @@ struct lxl_lexer {
     enum lxl_lex_error error;               // Error code set to the current lexing error.
     int line;                               // The current line number.
     bool is_finished;                       // Flag set when the lexer has no more (non-end) tokens to emit.
+    void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
     // Query functions (determine token type).
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
@@ -262,10 +263,54 @@ enum lxl__token_mvs {
 // END LEXEL MAGIC VALUES.
 
 
-// LEXER INTERFACE.
+// LEXER PUBLIC INTERFACE.
+
+// These are the functions and definitions designed to be called externally on the lexer.
 
 // Return whether the lexer has reached the end of its input.
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer);
+
+// Return the next token in the lexer's token stream.
+// Once the lexer has reached the end of its input, end tokens (token value LXL_TOKENS_END) are returned.
+struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer);
+
+// END LEXER PUBLIC INTERFACE.
+
+
+// LEXER STATES.
+
+// These are the standard state functions used by the lexer.
+// Lexer state functions encapsulate both the IDENTITY and ACTION of a state.
+// They should not be directly called by the lexer (with the exception of the main event loop),
+// but instead should set the next state to be entered upon completion. The aforementioned event
+// loop (in lxl_lexer_next_token()) will then dispatch to the next state function until the Return
+// state is encountered, whence the lexer will finalise the token and return it to the caller.
+// N.B., the Return state will leave the lexer in the Ready state while control has returned to the
+// caller, making this also the initial state when the lexer is called again.
+
+// Standard lexer state function signifying that the lexer is ready to begin lexing the next token.
+void lxl_lstate_Ready(struct lxl_lexer *lexer);
+
+// Standard lexer state function signifying that the lexer should start a new token.
+void lxl_lstate_BeginToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should emit an end token.
+void lxl_lstate_EmitEndToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifiying that the lexer should return to the caller.
+void lxl_lstate_Return(struct lxl_lexer *lexer);
+
+// END LEXER STATES.
+
+
+// LEXER INTERNAL INTERFACE.
+
+// These are the functions and definitions used internally by the lexer.
+// They are exposed here to make extending the lexer easier.
+
+// Call the given hook function on the lexer if it exists, or do nothing if it doesn't.
+#define LXL_LEXER__CALL_HOOK(LEXER, HOOK) \
+    (((LEXER)->(HOOK)) ? ((LEXER)->(HOOK)(LEXER)) : ((void)0))
 
 // Advance the lexer by a single character and return the codepoint.
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
@@ -288,7 +333,7 @@ bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view char
 // Match a whole string.
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string);
 
-// END LEXER INTERFACE.
+// END LEXER INTERNAL INTERFACE.
 
 
 // TOKEN INTERFACE.
