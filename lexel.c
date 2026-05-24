@@ -58,7 +58,7 @@ void lxl_lstate_Return(struct lxl_lexer *lexer) {
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
     if (lxl_utf8_stream_is_finished(&lexer->stream)) {
-        lexer->finished = true;
+        lexer->is_finished = true;
     }
     lxl_UnicodeCodepoint next = lxl_utf8_stream_advance(&lexer->stream);
     if (lexer->stream.error) lexer->error = LXL_LERR_UNICODE;
