@@ -312,10 +312,10 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 #define LXL_LEXER__CALL_HOOK(LEXER, HOOK) \
     (((LEXER)->(HOOK)) ? ((LEXER)->(HOOK)(LEXER)) : ((void)0))
 
-// Advance the lexer by a single character and return the codepoint.
+// Advance the lexer by a single codepoint and return the codepoint.
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
 
-// Rewind the lexer by a single character.
+// Rewind the lexer by a single codepoint.
 void lxl_lexer__rewind(struct lxl_lexer *lexer);
 
 // Rewind to the start of the current line.
