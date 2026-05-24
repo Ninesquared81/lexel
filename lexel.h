@@ -310,7 +310,7 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 
 // Call the given hook function on the lexer if it exists, or do nothing if it doesn't.
 #define LXL_LEXER__CALL_HOOK(LEXER, HOOK) \
-    (((LEXER)->(HOOK)) ? ((LEXER)->(HOOK)(LEXER)) : ((void)0))
+    (((LEXER)->HOOK) ? ((LEXER)->HOOK(LEXER)) : ((void)0))
 
 // Advance the lexer by a single codepoint and return the codepoint.
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
