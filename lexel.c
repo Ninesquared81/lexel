@@ -179,6 +179,7 @@ ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t ind
     if (index < 0) index += sv->length;
     if (index < 0) index = 0;
     if (index > sv->length) index = sv->length;
+    return index;
 }
 
 bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t index) {
