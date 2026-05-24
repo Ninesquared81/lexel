@@ -298,15 +298,21 @@ bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream) {
     stream->error = LXL_UNIERR_OK;
     int n_cont_bytes = 0;
     for (; lxl_count_leading_ones(stream->buffer.start[stream->cursor]) == 1; --stream->cursor) {
-        ++n_cont_bytes;
         if (stream->cursor <= 0) {
             stream->error = LXL_UNIERR_UNEXPECTED_EOF;
             return false;
         }
+        ++n_cont_bytes;
+        if (n_cont_bytes > 3) {
+            stream->error = LXL_UNIERR_UNEXPECTED_CONT_BYTE;
+            return false;
+        }
     }
+    LXL_ASSERT(0 <= n_cont_bytes && n_cont_bytes <= 3);
     --stream->cursor;
-    if (n_cont_bytes > 3) {
-        stream->error = LXL_UNIERR_INVALID_CONT_BYTE;
+    int n_ones_first = stream->buffer.start[stream->cursor];
+    if ((n_ones_first == 0 && n_cont_bytes != 0) || n_ones_first != n_cont_bytes + 1) {
+        stream->error = LXL_UNIERR_INVALID_FIRST_BYTE;
         return false;
     }
     return true;
