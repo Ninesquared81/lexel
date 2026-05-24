@@ -10,7 +10,7 @@ bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
 
 struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
     if (lexer->next_state == NULL) lexer->next_state = lxl_lstate_Ready;
-    LXL_ASSERT(lexer->next_state == lxl_state_Ready && "Lexer in unexpected state.");
+    LXL_ASSERT(lexer->next_state == lxl_lstate_Ready && "Lexer in unexpected state.");
     while (lexer->next_state != lxl_lstate_Return) {
         LXL_ASSERT(lexer->next_state != NULL && "Lexer state must never be null.");
         lexer->next_state(lexer);
