@@ -173,7 +173,7 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) 
 
 const char *lxl_sv_end(const struct lxl_string_view *sv) {
     return &sv->start[sv->length];
-};
+}
 
 ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index) {
     if (index < 0) index += sv->length;
