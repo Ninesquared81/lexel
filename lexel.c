@@ -143,7 +143,10 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_UNCLOSED_STRING:  return LXL_SV_FROM_STRLIT("Unclosed string or string-like literal");
     case LXL_LERR_INVALID_INTEGER:  return LXL_SV_FROM_STRLIT("Invalid integer literal");
     case LXL_LERR_INVALID_FLOAT:    return LXL_SV_FROM_STRLIT("Invlaid floating-point literal");
+    case LXL_LERR_UNICODE:          return LXL_SV_FROM_STRLIT("Unicode error");
     }
+    LXL_UNREACHABLE();
+    return (struct lxl_string_view) {0};
 }
 
 // END TOKEN INTERFACE.
