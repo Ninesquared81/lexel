@@ -27,7 +27,7 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
 void lxl_lstate_Ready(struct lxl_lexer *lexer) {
     LXL_LEXER__CALL_HOOK(lexer, before_token_hook);
     lexer->next_state = (!lxl_lexer_is_finished(lexer))
-        ? lxl_lstate_StartNewToken
+        ? lxl_lstate_BeginToken
         : lxl_lstate_EmitEndToken;
 }
 
