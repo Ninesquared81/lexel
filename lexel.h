@@ -202,12 +202,12 @@ struct lxl_lexer {
     // -- Default: always return false.
     bool (*match_float_digit)(struct lxl_lexer *self);      // Match a single floating-point digit.
     // -- Default: forward to `.match_integer_digit()`.
-    bool (*match_punct_char)(struct lxl_lexer *self);       // Match a single punctuation character.
+    bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
     int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
-    int (*get_int_type)(struct lxl_lexer *self);
-    int (*get_float_type)(struct lxl_lexer *self);
-    int (*get_punct_type)(struct lxl_lexer *self);
+    int (*get_int_type)(struct lxl_lexer *self);            // Get the type of the current int token.
+    int (*get_float_type)(struct lxl_lexer *self);          // Get the type of the current float token.
+    int (*get_punct_type)(struct lxl_lexer *self);          // Get the type of the current punct token.
 
     // Hook functions (called at specific times).
     void (*before_token_hook)(struct lxl_lexer *self);      // Called at the start of token lexing.
