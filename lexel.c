@@ -209,6 +209,13 @@ struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrd
     return lxl_sv_slice(sv, 0, to);
 }
 
+bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b) {
+    if (a.length != b.length) return false;
+    if (a.length == 0) return true;
+    LXL_ASSERT(a.start != NULL && b.start != NULL);
+    return memcmp(a.start, b.start, a.length) == 0;
+}
+
 
 // END STRING VIEW INTERFACE.
 

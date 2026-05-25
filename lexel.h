@@ -394,6 +394,9 @@ struct lxl_string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdif
 // Return a slice from the start of a string view up to the given index (0 ..< to).
 struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrdiff_t to);
 
+// Return true if two string views are equal, or false if they differ.
+bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b);
+
 // END STRING VIEW INTERFACE.
 
 
