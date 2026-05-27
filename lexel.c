@@ -460,12 +460,12 @@ bool lxl_utf8_stream_rewind(struct lxl_utf8_stream *stream) {
     }
     LXL_ASSERT(0 <= n_cont_bytes && n_cont_bytes <= 3);
     --stream->cursor;
-    int n_ones_first = stream->buffer.start[stream->cursor];
-    if ((n_ones_first == 0 && n_cont_bytes != 0) || n_ones_first != n_cont_bytes + 1) {
-        stream->error = LXL_UNIERR_INVALID_FIRST_BYTE;
-        return false;
-    }
-    return true;
+    uint8_t first_byte = stream->buffer.start[stream->cursor];
+    int n_ones_first = lxl_count_leading_ones(first_byte);
+    if (n_ones_first == 0 && n_cont_bytes == 0) return true;
+    if (n_ones_first + 1 == n_cont_bytes) return true;
+    stream->error = LXL_UNIERR_INVALID_FIRST_BYTE;
+    return false;
 }
 
 // END UNICODE INTERFACE.
