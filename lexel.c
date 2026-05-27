@@ -455,6 +455,22 @@ bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b) {
     return memcmp(a.start, b.start, a.length) == 0;
 }
 
+bool lxl_sv_eq_strings_impl(struct lxl_string_view sv, ...) {
+    va_list vargs;
+    va_start(vargs, sv);
+    bool success = lxl_sv_eq_strings_impl_vargs(sv, vargs);
+    va_end(vargs);
+    return success;
+}
+
+bool lxl_sv_eq_strings_impl_vargs(struct lxl_string_view sv, va_list vargs) {
+    for (const char *str_arg; (str_arg = va_arg(vargs, const char *));) {
+        if (lxl_sv_eq(sv, lxl_sv_from_string(str_arg))) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // END STRING VIEW INTERFACE.
 
