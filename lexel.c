@@ -65,6 +65,25 @@ void lxl_lstate_Return(struct lxl_lexer *lexer) {
 
 // LEXER INTERNAL INTERFACE.
 
+void lxl_lexer__begin_token(struct lxl_lexer *lexer) {
+    const char *src_pos = lxl_lexer__peek(lexer);
+    lexer->token.start = src_pos;
+    lexer->token.end = src_pos;
+    lexer->token.loc = lxl_lexer__get_location(lexer);
+    lexer->token.kind = LXL_TOKEN_UNINIT;
+}
+
+void lxl_lexer__finish_token(struct lxl_lexer *lexer) {
+    lexer->token.end = lxl_lexer__peek(lexer);
+    if (lexer->error) {
+        lexer->token.kind = lexer->error;
+    }
+}
+
+const char *lxl_lexer__peek(struct lxl_lexer *lexer) {
+    return lxl_utf8_stream_position(&lexer->stream);
+}
+
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
     if (lxl_utf8_stream_is_finished(&lexer->stream)) {
@@ -101,8 +120,15 @@ const char *lxl_lexer__seek_line_start(struct lxl_lexer *lexer) {
 }
 
 int lxl_lexer__get_column(struct lxl_lexer *lexer) {
-    const char *stream_position = lxl_utf8_stream_position(&lexer->stream);
+    const char *stream_position = lxl_lexer__peek(lexer);
     return stream_position - lexer->line_start;
+}
+
+struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer) {
+    return (struct lxl_location) {
+        .line = lexer->line,
+        .column = lxl_lexer__get_column(lexer),
+    };
 }
 
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {

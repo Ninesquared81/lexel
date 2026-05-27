@@ -316,6 +316,13 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 #define LXL_LEXER__CALL_HOOK(LEXER, HOOK) \
     (((LEXER)->HOOK) ? ((LEXER)->HOOK(LEXER)) : ((void)0))
 
+// Begin a token at the current lexer position.
+void lxl_lexer__begin_token(struct lxl_lexer *lexer);
+// Finish a token at the current lexer position.
+void lxl_lexer__finish_token(struct lxl_lexer *lexer);
+
+// Peek at the next byte to be read by the lexer.
+const char *lxl_lexer__peek(struct lxl_lexer *lexer);
 // Advance the lexer by a single codepoint and return the codepoint.
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
 
@@ -330,6 +337,9 @@ const char *lxl_lexer__seek_line_start(struct lxl_lexer *lexer);
 
 // Get the distance from the start of the current line.
 int lxl_lexer__get_column(struct lxl_lexer *lexer);
+// Get the current location (line, column) of the lexer.
+struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer);
+
 
 // Match one of a set of characters.
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars);
