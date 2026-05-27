@@ -249,7 +249,7 @@ bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {
 }
 
 
-bool lxl_lexer__match_whitesapce_char_builtin_no_lf(struct lxl_lexer *self) {
+bool lxl_lexer__match_whitespace_char_builtin_no_lf(struct lxl_lexer *self) {
     char ch = *lxl_lexer__peek(self);
     if (ch == '\n') {
         return false;

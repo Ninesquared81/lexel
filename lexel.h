@@ -408,7 +408,7 @@ bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
 
 // Match any whitespace character excluding a linefeed (`/n`).
 // This function forwards to `lxl_lexer__match_whitespace()` if the character is not `\n`.
-bool lxl_lexer__match_whitesapce_char_builtin_no_lf(struct lxl_lexer *self);
+bool lxl_lexer__match_whitespace_char_builtin_no_lf(struct lxl_lexer *self);
 // Match hexadecimal: digits `0`-`9` and characters `A`-`F` and `a`-`f`.
 bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self);
 
