@@ -81,6 +81,11 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer) {
     }
 }
 
+void lxl_lexer__error(struct lxl_lexer *lexer, enum lxl_lex_error error) {
+    lexer->error = error;
+    LXL_LEXER__CALL_HOOK(lexer, on_error_hook);
+}
+
 const char *lxl_lexer__peek(struct lxl_lexer *lexer) {
     return lxl_utf8_stream_position(&lexer->stream);
 }
@@ -91,14 +96,16 @@ lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
         lexer->is_finished = true;
     }
     lxl_UnicodeCodepoint next = lxl_utf8_stream_advance(&lexer->stream);
-    if (lexer->stream.error) lexer->error = LXL_LERR_UNICODE;
+    if (lexer->stream.error) {
+        lxl_lexer__error(lexer, LXL_LERR_UNICODE);
+    }
     if (next == '\n') ++lexer->line;
     return next;
 }
 
 void lxl_lexer__rewind(struct lxl_lexer *lexer) {
     if (!lxl_utf8_stream_rewind(&lexer->stream)) {
-        lexer->error = LXL_LERR_UNICODE;
+        lxl_lexer__error(lexer, LXL_LERR_UNICODE);
     }
     if (lexer->stream.buffer.start[lexer->stream.cursor] == '\n') {
         --lexer->line;

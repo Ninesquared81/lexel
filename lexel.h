@@ -335,6 +335,12 @@ void lxl_lexer__begin_token(struct lxl_lexer *lexer);
 void lxl_lexer__finish_token(struct lxl_lexer *lexer);
 
 
+/* Error handling. */
+
+// Set the error status of the lexer.
+void lxl_lexer__error(struct lxl_lexer *lexer, enum lxl_lex_error error);
+
+
 /* Lexer stream interaction. */
 
 // Peek at the next byte to be read by the lexer.
