@@ -36,17 +36,16 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
 
 void lxl_lstate_Ready(struct lxl_lexer *self) {
     LXL_LEXER__CALL_HOOK(self, before_token_hook);
-    self->next_state = (!lxl_lexer_is_finished(self))
-        ? lxl_lstate_BeginToken
-        : lxl_lstate_EmitEndToken;
+    self->next_state = lxl_lstate_BeginToken;
 }
 
 void lxl_lstate_BeginToken(struct lxl_lexer *self) {
-    LXL_ASSERT(!lxl_lexer_is_finished(self));
     lxl_lexer__skip_whitespace(self);
     LXL_LEXER__CALL_HOOK(self, after_whitespace_hook);
     lxl_lexer__begin_token(self);
-    self->next_state = lxl_lstate_LexWordToken;
+    self->next_state = (!lxl_lexer_is_finished(self))
+        ? lxl_lstate_LexWordToken
+        : lxl_lstate_EmitEndToken;
 }
 
 void lxl_lstate_LexWordToken(struct lxl_lexer *self) {
@@ -216,6 +215,7 @@ struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer) {
 }
 
 ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
+    if (lxl_lexer_is_finished(lexer)) return 0;
     const char *skip_start = lxl_lexer__peek(lexer);
     while (lxl_lexer__match_whitespace_char(lexer)) {
         /* Do nothing. */
