@@ -273,6 +273,22 @@ bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self) {
 }
 
 
+int lxl_lexer__get_word_type(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_word_type);
+}
+
+int lxl_lexer__get_int_type(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_int_type);
+}
+
+int lxl_lexer__get_float_type(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_float_type);
+}
+
+int lxl_lexer__get_punct_type(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_punct_type);
+}
+
 
 // END LEXER INTERNAL INTERFACE.
 

@@ -324,7 +324,9 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 // Call the given query function on the lexer if it exists, or call the default version.
 #define LXL_LEXER__CALL_QUERY(LEXER, QUERY) \
     (((LEXER)->QUERY) ? (LEXER)->QUERY : lxl_lexer__ ## QUERY ## _default)(LEXER)
-
+// Call the given function to get the corresponding token kind.
+#define LXL_LEXER__GET_KIND(LEXER, GETTER)      \
+    (((LEXER)->GETTER) ? (LEXER)->GETTER(LEXER) : (LEXER)->token.kind)
 
 /* Token handling. */
 
@@ -419,6 +421,13 @@ bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
 bool lxl_lexer__match_whitespace_char_builtin_no_lf(struct lxl_lexer *self);
 // Match hexadecimal: digits `0`-`9` and characters `A`-`F` and `a`-`f`.
 bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self);
+
+
+/* Lexer token type wrappers. */
+int lxl_lexer__get_word_type(struct lxl_lexer *self);
+int lxl_lexer__get_int_type(struct lxl_lexer *self);
+int lxl_lexer__get_float_type(struct lxl_lexer *self);
+int lxl_lexer__get_punct_type(struct lxl_lexer *self);
 
 
 // END LEXER INTERNAL INTERFACE.
