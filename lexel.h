@@ -491,7 +491,7 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error);
     {.start = STRLIT, .length = sizeof STRLIT - 1}
 
 // Get a string view from a null-terminated string. NOTE: for string literals, use LXL_SV_FROM_STRLIT().
-struct lxl_string_view lxl_sv_from_cstring(const char *string);
+struct lxl_string_view lxl_sv_from_string(const char *string);
 
 // Get a string view from a start pointer and length.
 struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length);

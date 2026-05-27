@@ -393,7 +393,7 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
 
 // STRING VIEW INTERFACE.
 
-struct lxl_string_view lxl_sv_from_cstring(const char *string) {
+struct lxl_string_view lxl_sv_from_string(const char *string) {
     return lxl_sv_from_startlen(string, strlen(string));
 }
 
