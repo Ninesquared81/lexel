@@ -208,6 +208,7 @@ struct lxl_lexer {
     bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
 
+    // Token type functions.
     int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
     int (*get_int_type)(struct lxl_lexer *self);            // Get the type of the current int token.
     int (*get_float_type)(struct lxl_lexer *self);          // Get the type of the current float token.
