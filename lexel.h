@@ -187,7 +187,6 @@ struct lxl_lexer {
     const char *line_start;                 // Pointer to the beginning of the current line.
     enum lxl_lex_error error;               // Error code set to the current lexing error.
     int line;                               // The current line number.
-    bool is_finished;                       // Flag set when the lexer has no more (non-end) tokens to emit.
     void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
     // Query functions.

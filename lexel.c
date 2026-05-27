@@ -15,7 +15,7 @@ struct lxl_lexer lxl_lexer_new(struct lxl_string_view src) {
 }
 
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
-    return lexer->is_finished;
+    return lxl_utf8_stream_is_finished(&lexer->stream);
 }
 
 struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
@@ -92,9 +92,7 @@ const char *lxl_lexer__peek(struct lxl_lexer *lexer) {
 
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer) {
     if (lxl_lexer_is_finished(lexer)) return 0;
-    if (lxl_utf8_stream_is_finished(&lexer->stream)) {
-        lexer->is_finished = true;
-    }
+    LXL_ASSERT(!lxl_utf8_stream_is_finished(&lexer->stream));
     lxl_UnicodeCodepoint next = lxl_utf8_stream_advance(&lexer->stream);
     if (lexer->stream.error) {
         lxl_lexer__error(lexer, LXL_LERR_UNICODE);
