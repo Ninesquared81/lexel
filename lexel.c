@@ -257,6 +257,10 @@ bool lxl_lexer__match_whitesapce_char_builtin_no_lf(struct lxl_lexer *self) {
     return lxl_lexer__match_whitespace_char(self);
 }
 
+bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self) {
+    struct lxl_string_view hex_alpha = LXL_SV_FROM_STRLIT("ABCDEFabcdef");
+    return lxl_lexer__match_int_digit_default(self) || lxl_lexer__match_chars(self, hex_alpha);
+}
 
 
 
