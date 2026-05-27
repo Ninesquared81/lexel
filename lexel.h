@@ -361,9 +361,12 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error);
 
 // STRING VIEW INTERFACE.
 
-// Get a sting view from a string literal.
-#define LXL_SV_FROM_STRLIT(STRLIT)              \
-    lxl_sv_from_startlen(STRLIT, sizeof STRLIT - 1)
+// Get a string view from a string literal.
+#define LXL_SV_FROM_STRLIT(STRLIT)                      \
+    (struct lxl_string_view) LXL_SV_FROM_STRLIT_INIT(STRLIT)
+// Get a string view from a string literal as an initialiser.
+#define LXL_SV_FROM_STRLIT_INIT(STRLIT)             \
+    {.start = STRLIT, .length = sizeof STRLIT - 1}
 
 // Get a string view from a null-terminated string. NOTE: for string literals, use LXL_SV_FROM_STRLIT().
 struct lxl_string_view lxl_sv_from_cstring(const char *string);
