@@ -161,6 +161,95 @@ fail:
     return false;
 }
 
+bool lxl_lexer__match_whitespace_char(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_whitespace_char);
+}
+
+bool lxl_lexer__match_word_init_char(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_word_init_char);
+}
+
+bool lxl_lexer__match_word_char(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_word_char);
+}
+
+bool lxl_lexer__match_int_prefix(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_int_prefix);
+}
+
+bool lxl_lexer__match_int_digit(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_int_digit);
+}
+
+bool lxl_lexer__match_float_prefix(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_prefix);
+}
+
+bool lxl_lexer__match_float_digit(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_digit);
+}
+
+bool lxl_lexer__match_punct(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_punct);
+}
+
+
+bool lxl_lexer__match_whitespace_char_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT(LXL_WHITESPACE_CHARS));
+}
+
+bool lxl_lexer__match_word_init_char_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_word_char(self);
+}
+
+bool lxl_lexer__match_word_char_default(struct lxl_lexer *self) {
+    if (lxl_lexer__match_whitespace_char(self)) {
+        lxl_lexer__rewind(self);
+        return false;
+    }
+    lxl_lexer__advance(self);
+    return true;
+}
+
+bool lxl_lexer__match_int_prefix_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_int_digit(self);
+}
+
+bool lxl_lexer__match_int_digit_default(struct lxl_lexer *self) {
+    lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
+    if ('0' <= ch && ch <= '9') return true;
+    lxl_lexer__rewind(self);
+    return false;
+}
+
+bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_float_digit(self);
+}
+
+bool lxl_lexer__match_float_digit_default(struct lxl_lexer *self) {
+    lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
+    if (('0' <= ch && ch <= '9') || ch == '.') return true;
+    lxl_lexer__rewind(self);
+    return false;
+}
+
+bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
+
+bool lxl_lexer__match_whitesapce_char_builtin_no_lf(struct lxl_lexer *self) {
+    char ch = *lxl_lexer__peek(self);
+    if (ch == '\n') {
+        return false;
+    }
+    return lxl_lexer__match_whitespace_char(self);
+}
+
+
+
+
 // END LEXER INTERNAL INTERFACE.
 
 

@@ -365,6 +365,46 @@ bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view char
 // Match a whole string.
 bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view string);
 
+
+/* Lexer match function wrappers. */
+
+bool lxl_lexer__match_whitespace_char(struct lxl_lexer *self);
+bool lxl_lexer__match_word_init_char(struct lxl_lexer *self);
+bool lxl_lexer__match_word_char(struct lxl_lexer *self);
+bool lxl_lexer__match_int_prefix(struct lxl_lexer *self);
+bool lxl_lexer__match_int_digit(struct lxl_lexer *self);
+bool lxl_lexer__match_float_prefix(struct lxl_lexer *self);
+bool lxl_lexer__match_float_digit(struct lxl_lexer *self);
+bool lxl_lexer__match_punct(struct lxl_lexer *self);
+
+
+/* Lexer default match functions. */
+
+// Match any whitespace character in `LXL_WHITESPACE`
+bool lxl_lexer__match_whitespace_char_default(struct lxl_lexer *self);
+// Forward to `lxl_lexer__match_word_char()`.
+bool lxl_lexer__match_word_init_char_default(struct lxl_lexer *self);
+// Match any non-whitespace character (determined by `lxl_lexer__match_whitespace_char()`).
+bool lxl_lexer__match_word_char_default(struct lxl_lexer *self);
+// Forward to `lxl_lexer__match_int_digit()`.
+bool lxl_lexer__match_int_prefix_default(struct lxl_lexer *self);
+// Match digits `0`-`9`.
+bool lxl_lexer__match_int_digit_default(struct lxl_lexer *self);
+// Forward to `lxl_lexer__match_float_digit()`.
+bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self);
+// Match digits `0`-`9` and decimal dot `.`.
+bool lxl_lexer__match_float_digit_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
+
+
+/* Lexer built-in match functions. */
+
+// Match any whitespace character excluding a linefeed (`/n`).
+// This function forwards to `lxl_lexer__match_whitespace()` if the character is not `\n`.
+bool lxl_lexer__match_whitesapce_char_builtin_no_lf(struct lxl_lexer *self);
+
+
 // END LEXER INTERNAL INTERFACE.
 
 
