@@ -157,6 +157,7 @@ enum lxl_lex_error {
     LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
     LXL_LERR_INVALID_FLOAT = -21,     // A floating-point literal was invalid.
     LXL_LERR_UNICODE = -22,           // A Unicode error.
+    LXL_LERR_UNRECOGNISED_TOKEN = -23,  // The lexer's input did not match any known tokens.
 };
 
 // A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
@@ -296,16 +297,43 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer);
 // caller, making this also the initial state when the lexer is called again.
 
 // Standard lexer state function signifying that the lexer is ready to begin lexing the next token.
-void lxl_lstate_Ready(struct lxl_lexer *lexer);
+void lxl_lstate_Ready(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should start a new token.
 void lxl_lstate_BeginToken(struct lxl_lexer *self);
 
+// Standard lexer state function signifying that the lexer should try to lex a word.
+void lxl_lstate_LexWordToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should try to lex an integer.
+void lxl_lstate_LexIntToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifiying that the lexer should try to lex a float.
+void lxl_lstate_LexFloatToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should try to lex punctuation.
+void lxl_lstate_LexPunctToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer did not recognised the token.
+void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self);
+
 // Standard lexer state function signifying that the lexer should emit an end token.
 void lxl_lstate_EmitEndToken(struct lxl_lexer *self);
 
+// Standard lexer state function signifying thtat the lexer should emit a word token.
+void lxl_lstate_EmitWordToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying thtat the lexer should emit a int token.
+void lxl_lstate_EmitIntToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying thtat the lexer should emit a float token.
+void lxl_lstate_EmitFloatToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying thtat the lexer should emit a punctuation token.
+void lxl_lstate_EmitPunctToken(struct lxl_lexer *self);
+
 // Standard lexer state function signifiying that the lexer should return to the caller.
-void lxl_lstate_Return(struct lxl_lexer *lexer);
+void lxl_lstate_Return(struct lxl_lexer *self);
 
 // END LEXER STATES.
 

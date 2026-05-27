@@ -34,31 +34,104 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
 
 // LEXER STATES.
 
-void lxl_lstate_Ready(struct lxl_lexer *lexer) {
-    LXL_LEXER__CALL_HOOK(lexer, before_token_hook);
-    lexer->next_state = (!lxl_lexer_is_finished(lexer))
+void lxl_lstate_Ready(struct lxl_lexer *self) {
+    LXL_LEXER__CALL_HOOK(self, before_token_hook);
+    self->next_state = (!lxl_lexer_is_finished(self))
         ? lxl_lstate_BeginToken
         : lxl_lstate_EmitEndToken;
 }
 
-void lxl_lstate_BeginToken(struct lxl_lexer *lexer) {
-    LXL_ASSERT(!lxl_lexer_is_finished(lexer));
-    lxl_lexer__skip_whitespace(lexer);
-    lxl_lexer__begin_token(lexer);
-    lexer->next_state = lxl_lstate_Return;
+void lxl_lstate_BeginToken(struct lxl_lexer *self) {
+    LXL_ASSERT(!lxl_lexer_is_finished(self));
+    lxl_lexer__skip_whitespace(self);
+    LXL_LEXER__CALL_HOOK(self, after_whitespace_hook);
+    lxl_lexer__begin_token(self);
+    self->next_state = lxl_lstate_LexWordToken;
 }
 
-void lxl_lstate_EmitEndToken(struct lxl_lexer *lexer) {
-    LXL_ASSERT(lxl_lexer_is_finished(lexer));
-    lxl_lexer__begin_token(lexer);
-    lexer->token.kind = LXL_TOKENS_END;
-    lexer->next_state = lxl_lstate_Return;
+void lxl_lstate_LexWordToken(struct lxl_lexer *self) {
+    if (!lxl_lexer__match_word_init_char(self)) {
+        self->next_state = lxl_lstate_LexIntToken;
+        return;
+    }
+    while (lxl_lexer__match_word_char(self)) {
+        /* Do nothing. */
+    }
+    self->next_state = lxl_lstate_EmitWordToken;
 }
 
-void lxl_lstate_Return(struct lxl_lexer *lexer) {
-    lxl_lexer__finish_token(lexer);
-    LXL_LEXER__CALL_HOOK(lexer, after_token_hook);
-    lexer->next_state = lxl_lstate_Ready;
+void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
+    if (!lxl_lexer__match_int_prefix(self)) {
+        self->next_state = lxl_lstate_LexFloatToken;
+        return;
+    }
+    LXL_LEXER__CALL_HOOK(self, before_integer_hook);
+    while (lxl_lexer__match_int_digit(self)) {
+        /* Do nothing. */
+    }
+    self->next_state = lxl_lstate_EmitIntToken;
+    LXL_LEXER__CALL_HOOK(self, after_integer_hook);
+}
+
+void lxl_lstate_LexFloatToken(struct lxl_lexer *self) {
+    if (!lxl_lexer__match_float_prefix(self)) {
+        self->next_state = lxl_lstate_LexPunctToken;
+        return;
+    }
+    LXL_LEXER__CALL_HOOK(self, before_float_hook);
+    while (lxl_lexer__match_float_digit(self)) {
+        /* Do nothing. */
+    }
+    self->next_state = lxl_lstate_EmitFloatToken;
+    LXL_LEXER__CALL_HOOK(self, after_float_hook);
+}
+
+void lxl_lstate_LexPunctToken(struct lxl_lexer *self) {
+    bool success = lxl_lexer__match_punct(self);
+    self->next_state = (success)
+        ? lxl_lstate_EmitPunctToken
+        : lxl_lstate_UnrecognisedToken;
+}
+
+void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self) {
+    lxl_lexer__error(self, LXL_LERR_UNRECOGNISED_TOKEN);
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitEndToken(struct lxl_lexer *self) {
+    LXL_ASSERT(lxl_lexer_is_finished(self));
+    lxl_lexer__begin_token(self);
+    self->token.kind = LXL_TOKENS_END;
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitWordToken(struct lxl_lexer *self) {
+    self->token.kind = lxl_lexer__get_word_type(self);
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitIntToken(struct lxl_lexer *self) {
+    self->token.kind = lxl_lexer__get_int_type(self);
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitFloatToken(struct lxl_lexer *self) {
+    self->token.kind = lxl_lexer__get_float_type(self);
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitPunctToken(struct lxl_lexer *self) {
+    self->token.kind = lxl_lexer__get_punct_type(self);
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_Return(struct lxl_lexer *self) {
+    if (self->error) {
+        LXL_LEXER__CALL_HOOK(self, before_error_token_hook);
+    }
+    lxl_lexer__finish_token(self);
+    LXL_LEXER__CALL_HOOK(self, after_token_hook);
+    self->next_state = lxl_lstate_Ready;
 }
 
 // END LEXER STATES.
@@ -309,6 +382,7 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_INVALID_INTEGER:  return LXL_SV_FROM_STRLIT("Invalid integer literal");
     case LXL_LERR_INVALID_FLOAT:    return LXL_SV_FROM_STRLIT("Invlaid floating-point literal");
     case LXL_LERR_UNICODE:          return LXL_SV_FROM_STRLIT("Unicode error");
+    case LXL_LERR_UNRECOGNISED_TOKEN: return LXL_SV_FROM_STRLIT("Unknown token");
     }
     LXL_UNREACHABLE();
     return (struct lxl_string_view) {0};
