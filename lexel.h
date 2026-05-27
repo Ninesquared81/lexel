@@ -55,6 +55,7 @@
 #define LEXEL_H
 
 #include <assert.h>     // assert()
+#include <limits.h>     // INT_MAX.
 #include <stdbool.h>    // bool, false, true -- requires C99
 #include <stddef.h>     // ptrdiff_t
 #include <stdint.h>     // int32_t, uint8_t.
@@ -379,6 +380,13 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end);
 
 // Get a pointer to one past the end of a string view.
 const char *lxl_sv_end(const struct lxl_string_view *sv);
+
+// String view format specifier for use with printf style formatting.
+// Use together with LXL_SV_FMT_ARG to unpack the argument.
+#define LXL_SV_FMT_SPC ".*s"
+// Unpack a string view as arguments for printf style formatters.
+// Use together with LXL_SV_FMT_SPC to specify the format.
+#define LXL_SV_FMT_ARG(SV) (((SV).length < INT_MAX) ? (int)(SV).length : INT_MAX), (SV).start
 
 // Fold a possibly negative index into the range 0 ..<= sv.length (aka the "nominal range").
 ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index);
