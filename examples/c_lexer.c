@@ -6,7 +6,7 @@
 
 int main(void) {
     struct lxl_string_view src =
-        LXL_SV_FROM_STRLIT_INIT("   assert(1 + 1 == 2);");
+        LXL_SV_FROM_STRLIT_INIT("int main(void) {\n\tassert(1 + 1 == 2);\n}\n");
     struct lxl_lexer lexer = create_c_lexer(src);
     for (struct lxl_token token; !LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer));) {
         struct lxl_string_view token_sv = lxl_token_value(token);
@@ -161,7 +161,62 @@ bool match_punct(struct lxl_lexer *self) {
 }
 
 int get_word_type(struct lxl_lexer *self) {
-    (void)self;
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    if (lxl_sv_eq_strings(token_sv, "alignas", "_Alignas")) return CTOK_KW_ALIGNAS;
+    if (lxl_sv_eq_strings(token_sv, "alignof", "_Alignof")) return CTOK_KW_ALIGNOF;
+    if (lxl_sv_eq_strings(token_sv, "_Atomic")) return CTOK_KW_ATOMIC;
+    if (lxl_sv_eq_strings(token_sv, "auto")) return CTOK_KW_AUTO;
+    if (lxl_sv_eq_strings(token_sv, "_BitInt")) return CTOK_KW_BITINT;
+    if (lxl_sv_eq_strings(token_sv, "_Bool")) return CTOK_KW_BOOL;
+    if (lxl_sv_eq_strings(token_sv, "break")) return CTOK_KW_BREAK;
+    if (lxl_sv_eq_strings(token_sv, "_Complex")) return CTOK_KW_COMPLEX;
+    if (lxl_sv_eq_strings(token_sv, "case")) return CTOK_KW_CASE;
+    if (lxl_sv_eq_strings(token_sv, "char")) return CTOK_KW_CHAR;
+    if (lxl_sv_eq_strings(token_sv, "const")) return CTOK_KW_CONST;
+    if (lxl_sv_eq_strings(token_sv, "constexpr")) return CTOK_KW_CONSTEXPR;
+    if (lxl_sv_eq_strings(token_sv, "continue")) return CTOK_KW_CONTINUE;
+    if (lxl_sv_eq_strings(token_sv, "_Decimal128")) return CTOK_KW_DECIMAL128;
+    if (lxl_sv_eq_strings(token_sv, "_Decimal32")) return CTOK_KW_DECIMAL32;
+    if (lxl_sv_eq_strings(token_sv, "_Decimal64")) return CTOK_KW_DECIMAL64;
+    if (lxl_sv_eq_strings(token_sv, "default")) return CTOK_KW_DEFAULT;
+    if (lxl_sv_eq_strings(token_sv, "do")) return CTOK_KW_DO;
+    if (lxl_sv_eq_strings(token_sv, "double")) return CTOK_KW_DOUBLE;
+    if (lxl_sv_eq_strings(token_sv, "else")) return CTOK_KW_ELSE;
+    if (lxl_sv_eq_strings(token_sv, "enum")) return CTOK_KW_ENUM;
+    if (lxl_sv_eq_strings(token_sv, "extern")) return CTOK_KW_EXTERN;
+    if (lxl_sv_eq_strings(token_sv, "false")) return CTOK_KW_FALSE;
+    if (lxl_sv_eq_strings(token_sv, "float")) return CTOK_KW_FLOAT;
+    if (lxl_sv_eq_strings(token_sv, "for")) return CTOK_KW_FOR;
+    if (lxl_sv_eq_strings(token_sv, "_Generic")) return CTOK_KW_GENERIC;
+    if (lxl_sv_eq_strings(token_sv, "goto")) return CTOK_KW_GOTO;
+    if (lxl_sv_eq_strings(token_sv, "if")) return CTOK_KW_IF;
+    if (lxl_sv_eq_strings(token_sv, "_Imaginary")) return CTOK_KW_IMAGINARY;
+    if (lxl_sv_eq_strings(token_sv, "inline")) return CTOK_KW_INLINE;
+    if (lxl_sv_eq_strings(token_sv, "int")) return CTOK_KW_INT;
+    if (lxl_sv_eq_strings(token_sv, "long")) return CTOK_KW_LONG;
+    if (lxl_sv_eq_strings(token_sv, "_Noreturn")) return CTOK_KW_NORETURN;
+    if (lxl_sv_eq_strings(token_sv, "nullptr")) return CTOK_KW_NULLPTR;
+    if (lxl_sv_eq_strings(token_sv, "register")) return CTOK_KW_REGISTER;
+    if (lxl_sv_eq_strings(token_sv, "restrict")) return CTOK_KW_RESTRICT;
+    if (lxl_sv_eq_strings(token_sv, "return")) return CTOK_KW_RETURN;
+    if (lxl_sv_eq_strings(token_sv, "short")) return CTOK_KW_SHORT;
+    if (lxl_sv_eq_strings(token_sv, "signed")) return CTOK_KW_SIGNED;
+    if (lxl_sv_eq_strings(token_sv, "sizeof")) return CTOK_KW_SIZEOF;
+    if (lxl_sv_eq_strings(token_sv, "static")) return CTOK_KW_STATIC;
+    if (lxl_sv_eq_strings(token_sv, "static_assert", "_Static_Assert")) return CTOK_KW_STATIC_ASSERT;
+    if (lxl_sv_eq_strings(token_sv, "struct")) return CTOK_KW_STRUCT;
+    if (lxl_sv_eq_strings(token_sv, "switch")) return CTOK_KW_SWITCH;
+    if (lxl_sv_eq_strings(token_sv, "thread_local", "_Thread_Local")) return CTOK_KW_THREAD_LOCAL;
+    if (lxl_sv_eq_strings(token_sv, "true")) return CTOK_KW_TRUE;
+    if (lxl_sv_eq_strings(token_sv, "typedef")) return CTOK_KW_TYPEDEF;
+    if (lxl_sv_eq_strings(token_sv, "typeof")) return CTOK_KW_TYPEOF;
+    if (lxl_sv_eq_strings(token_sv, "typeof_unqual")) return CTOK_KW_TYPEOF_UNQUAL;
+    if (lxl_sv_eq_strings(token_sv, "union")) return CTOK_KW_UNION;
+    if (lxl_sv_eq_strings(token_sv, "unsigned")) return CTOK_KW_UNSIGNED;
+    if (lxl_sv_eq_strings(token_sv, "void")) return CTOK_KW_VOID;
+    if (lxl_sv_eq_strings(token_sv, "volatile")) return CTOK_KW_VOLATILE;
+    if (lxl_sv_eq_strings(token_sv, "while")) return CTOK_KW_WHILE;
+
     return CTOK_IDENTIFIER;
 }
 
@@ -182,27 +237,27 @@ int get_punct_type(struct lxl_lexer *self) {
         // Single-character tokens have their type as their value.
         return token_sv.start[0];
     }
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("!=")))  return CTOK_BANG_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("%=")))  return CTOK_PERCENT_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("&&")))  return CTOK_AMPERSAND_AMPERSAND;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("&=")))  return CTOK_AMPERSAND_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("*=")))  return CTOK_ASTERISK_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("++")))  return CTOK_PLUS_PLUS;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("+=")))  return CTOK_PLUS_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("--")))  return CTOK_MINUS_MINUS;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("-=")))  return CTOK_MINUS_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("->")))  return CTOK_ARROW;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("..."))) return CTOK_ELIPSIS;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("/=")))  return CTOK_SLASH_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("<<")))  return CTOK_LT_LT;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("<<="))) return CTOK_LT_LT_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("<=")))  return CTOK_LT_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("==")))  return CTOK_EQ_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT(">=")))  return CTOK_GT_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT(">>")))  return CTOK_GT_GT;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT(">>="))) return CTOK_GT_GT_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("^=")))  return CTOK_CARET_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("|=")))  return CTOK_VBAR_EQ;
-    if (lxl_sv_eq(token_sv, LXL_SV_FROM_STRLIT("||")))  return CTOK_VBAR_VBAR;
+    if (lxl_sv_eq_strings(token_sv, "!="))  return CTOK_BANG_EQ;
+    if (lxl_sv_eq_strings(token_sv, "%="))  return CTOK_PERCENT_EQ;
+    if (lxl_sv_eq_strings(token_sv, "&&"))  return CTOK_AMPERSAND_AMPERSAND;
+    if (lxl_sv_eq_strings(token_sv, "&="))  return CTOK_AMPERSAND_EQ;
+    if (lxl_sv_eq_strings(token_sv, "*="))  return CTOK_ASTERISK_EQ;
+    if (lxl_sv_eq_strings(token_sv, "++"))  return CTOK_PLUS_PLUS;
+    if (lxl_sv_eq_strings(token_sv, "+="))  return CTOK_PLUS_EQ;
+    if (lxl_sv_eq_strings(token_sv, "--"))  return CTOK_MINUS_MINUS;
+    if (lxl_sv_eq_strings(token_sv, "-="))  return CTOK_MINUS_EQ;
+    if (lxl_sv_eq_strings(token_sv, "->"))  return CTOK_ARROW;
+    if (lxl_sv_eq_strings(token_sv, "...")) return CTOK_ELIPSIS;
+    if (lxl_sv_eq_strings(token_sv, "/="))  return CTOK_SLASH_EQ;
+    if (lxl_sv_eq_strings(token_sv, "<<"))  return CTOK_LT_LT;
+    if (lxl_sv_eq_strings(token_sv, "<<=")) return CTOK_LT_LT_EQ;
+    if (lxl_sv_eq_strings(token_sv, "<="))  return CTOK_LT_EQ;
+    if (lxl_sv_eq_strings(token_sv, "=="))  return CTOK_EQ_EQ;
+    if (lxl_sv_eq_strings(token_sv, ">="))  return CTOK_GT_EQ;
+    if (lxl_sv_eq_strings(token_sv, ">>"))  return CTOK_GT_GT;
+    if (lxl_sv_eq_strings(token_sv, ">>=")) return CTOK_GT_GT_EQ;
+    if (lxl_sv_eq_strings(token_sv, "^="))  return CTOK_CARET_EQ;
+    if (lxl_sv_eq_strings(token_sv, "|="))  return CTOK_VBAR_EQ;
+    if (lxl_sv_eq_strings(token_sv, "||"))  return CTOK_VBAR_VBAR;
     return LXL_LERR_GENERIC;
 }
