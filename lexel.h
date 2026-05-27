@@ -267,6 +267,9 @@ enum lxl__token_mvs {
 
 // These are the functions and definitions designed to be called externally on the lexer.
 
+// Create a new lexer.
+struct lxl_lexer lxl_lexer_new(struct lxl_string_view src);
+
 // Return whether the lexer has reached the end of its input.
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer);
 

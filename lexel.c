@@ -4,6 +4,16 @@
 
 // LEXER PUBLIC INTERFACE.
 
+struct lxl_lexer lxl_lexer_new(struct lxl_string_view src) {
+    struct lxl_lexer new_lexer = {
+        .stream = {.buffer = src},
+        .line_start = src.start,
+        .next_state = lxl_lstate_Ready,
+        /* All other fields zero/NULL. */
+    };
+    return new_lexer;
+}
+
 bool lxl_lexer_is_finished(const struct lxl_lexer *lexer) {
     return lexer->is_finished;
 }
