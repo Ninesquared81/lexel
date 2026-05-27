@@ -43,19 +43,20 @@ void lxl_lstate_Ready(struct lxl_lexer *lexer) {
 
 void lxl_lstate_BeginToken(struct lxl_lexer *lexer) {
     LXL_ASSERT(!lxl_lexer_is_finished(lexer));
-    // lxl_lexer__skip_whitespace(lexer);
-    // lxl_lexer__begin_token(lexer, LXL_TOKEN_UNINIT);
+    lxl_lexer__skip_whitespace(lexer);
+    lxl_lexer__begin_token(lexer);
     lexer->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_EmitEndToken(struct lxl_lexer *lexer) {
     LXL_ASSERT(lxl_lexer_is_finished(lexer));
-    // lxl_lexer__begin_token(lexer, LXL_TOKENS_END);
+    lxl_lexer__begin_token(lexer);
+    lexer->token.kind = LXL_TOKENS_END;
     lexer->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_Return(struct lxl_lexer *lexer) {
-    // lxl_lexer__finish_token(lexer);
+    lxl_lexer__finish_token(lexer);
     LXL_LEXER__CALL_HOOK(lexer, after_token_hook);
     lexer->next_state = lxl_lstate_Ready;
 }
