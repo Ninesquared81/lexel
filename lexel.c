@@ -131,6 +131,15 @@ struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer) {
     };
 }
 
+ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
+    const char *skip_start = lxl_lexer__peek(lexer);
+    while (lxl_lexer__match_whitespace_char(lexer)) {
+        /* Do nothing. */
+    }
+    const char *skip_end = lxl_lexer__peek(lexer);
+    return skip_end - skip_start;
+}
+
 bool lxl_lexer__match_chars(struct lxl_lexer *lexer, struct lxl_string_view chars) {
     if (lxl_lexer_is_finished(lexer)) return false;
     lxl_UnicodeCodepoint lexer_next = lxl_lexer__advance(lexer);

@@ -357,6 +357,12 @@ int lxl_lexer__get_column(struct lxl_lexer *lexer);
 struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer);
 
 
+/* General lexing. */
+
+// Skip whitespace at the start of a token.
+// Return number of bytes skipped.
+ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
+
 
 /* Lexer general matching functions. */
 
