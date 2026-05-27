@@ -319,6 +319,9 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 // Call the given hook function on the lexer if it exists, or do nothing if it doesn't.
 #define LXL_LEXER__CALL_HOOK(LEXER, HOOK) \
     (((LEXER)->HOOK) ? ((LEXER)->HOOK(LEXER)) : ((void)0))
+// Call the given query function on the lexer if it exists, or call the default version.
+#define LXL_LEXER__CALL_QUERY(LEXER, QUERY) \
+    (((LEXER)->QUERY) ? (LEXER)->QUERY : lxl_lexer__ ## QUERY ## _default)(LEXER)
 
 // Begin a token at the current lexer position.
 void lxl_lexer__begin_token(struct lxl_lexer *lexer);
