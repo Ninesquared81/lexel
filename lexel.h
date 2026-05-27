@@ -332,6 +332,9 @@ void lxl_lstate_Return(struct lxl_lexer *lexer);
 void lxl_lexer__begin_token(struct lxl_lexer *lexer);
 // Finish a token at the current lexer position.
 void lxl_lexer__finish_token(struct lxl_lexer *lexer);
+// Peek at the next token value. This would be the value of the next token
+// if it were to be emitted immediately.
+struct lxl_string_view lxl_lexer__peek_token(struct lxl_lexer *lexer);
 
 
 /* Error handling. */

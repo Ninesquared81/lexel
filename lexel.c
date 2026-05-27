@@ -81,6 +81,11 @@ void lxl_lexer__finish_token(struct lxl_lexer *lexer) {
     }
 }
 
+struct lxl_string_view lxl_lexer__peek_token(struct lxl_lexer *lexer) {
+    const char *end = lxl_lexer__peek(lexer);
+    return lxl_sv_from_startend(lexer->token.start, end);
+}
+
 void lxl_lexer__error(struct lxl_lexer *lexer, enum lxl_lex_error error) {
     lexer->error = error;
     LXL_LEXER__CALL_HOOK(lexer, on_error_hook);
