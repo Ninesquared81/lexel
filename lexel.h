@@ -198,15 +198,16 @@ struct lxl_lexer {
     bool (*match_word_char)(struct lxl_lexer *self);        // Match a single word-constituent character.
     // -- Default: match any non-whitespace character.
     bool (*match_int_prefix)(struct lxl_lexer *self);       // Match an integer literal prefix (e.g. `0x`).
-    // -- Default: always return false.
+    // -- Default: forward to `.match_int_digit()`.
     bool (*match_int_digit)(struct lxl_lexer *self);        // Match a single integer digit.
     // -- Default: match digits `0`-`9`.
     bool (*match_float_prefix)(struct lxl_lexer *self);     // Match a floating-point literal prefix.
-    // -- Default: always return false.
+    // -- Default: forward to `.match_float_digit()`.
     bool (*match_float_digit)(struct lxl_lexer *self);      // Match a single floating-point digit.
-    // -- Default: forward to `.match_integer_digit()`.
+    // -- Default: match digits `0`-`9` and decimal dot `.`.
     bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
+
     int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
     int (*get_int_type)(struct lxl_lexer *self);            // Get the type of the current int token.
     int (*get_float_type)(struct lxl_lexer *self);          // Get the type of the current float token.
