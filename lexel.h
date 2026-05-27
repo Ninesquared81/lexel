@@ -190,7 +190,9 @@ struct lxl_lexer {
     bool is_finished;                       // Flag set when the lexer has no more (non-end) tokens to emit.
     void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
-    // Query functions (determine token type).
+    // Query functions.
+    bool (*match_whitespace_char)(struct lxl_lexer *self);  // Match a single whitespace character.
+    // -- Default: match any of the characters in `LXL_WHITESPACE_CHARS`.
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
     // -- Default: forward to `.match_word_char()`.
     bool (*match_word_char)(struct lxl_lexer *self);        // Match a single word-constituent character.
