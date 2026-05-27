@@ -10,9 +10,11 @@ int main(void) {
     struct lxl_lexer lexer = create_c_lexer(src);
     for (struct lxl_token token; !LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer));) {
         struct lxl_string_view token_sv = lxl_token_value(token);
-        // struct lxl_string_view kind_sv = c_token_kind_name(token.kind);
-        printf("%"LXL_SV_FMT_SPC"\n",
-               LXL_SV_FMT_ARG(token_sv));
+        struct lxl_string_view kind_sv = c_token_kind_name(token.kind);
+        printf("%-32"LXL_SV_FMT_SPC" %"LXL_SV_FMT_SPC"\n",
+               LXL_SV_FMT_ARG(kind_sv),
+               LXL_SV_FMT_ARG(token_sv)
+            );
     }
     return 0;
 }
