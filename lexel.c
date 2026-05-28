@@ -36,11 +36,15 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer) {
 
 void lxl_lstate_Ready(struct lxl_lexer *self) {
     LXL_LEXER__CALL_HOOK(self, before_token_hook);
-    self->next_state = lxl_lstate_BeginToken;
+    self->next_state = lxl_lstate_SkipWhitespace;
+}
+
+void lxl_lstate_SkipWhitespace(struct lxl_lexer *self) {
+    lxl_lexer__skip_whitespace(self);
+    // NOTE: state set by `lxl_lexer__skip_whitespace()`.
 }
 
 void lxl_lstate_BeginToken(struct lxl_lexer *self) {
-    lxl_lexer__skip_whitespace(self);
     LXL_LEXER__CALL_HOOK(self, after_whitespace_hook);
     lxl_lexer__begin_token(self);
     self->next_state = (!lxl_lexer_is_finished(self))
@@ -101,6 +105,14 @@ void lxl_lstate_EmitEndToken(struct lxl_lexer *self) {
     LXL_ASSERT(lxl_lexer_is_finished(self));
     lxl_lexer__begin_token(self);
     self->token.kind = LXL_TOKENS_END;
+    self->next_state = lxl_lstate_Return;
+}
+
+void lxl_lstate_EmitLineEndingToken(struct lxl_lexer *self) {
+    lxl_lexer__begin_token(self);
+    LXL_ASSERT(self->token.start > self->stream.buffer.start);
+    self->token.start -= 1;
+    self->token.kind = LXL_TOKEN_LINE_ENDING;
     self->next_state = lxl_lstate_Return;
 }
 
@@ -215,11 +227,15 @@ struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer) {
 }
 
 ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
-    if (lxl_lexer_is_finished(lexer)) return 0;
     const char *skip_start = lxl_lexer__peek(lexer);
     while (lxl_lexer__match_whitespace_char(lexer)) {
-        /* Do nothing. */
+        if (lexer->stream.cursor > 0 && lxl_lexer__peek(lexer)[-1] == '\n') {
+            LXL_LEXER__CALL_HOOK(lexer, on_linefeed_hook);
+            goto next_state;
+        }
     }
+    lexer->next_state = lxl_lstate_BeginToken;
+next_state: ;
     const char *skip_end = lxl_lexer__peek(lexer);
     return skip_end - skip_start;
 }
@@ -362,6 +378,10 @@ int lxl_lexer__get_punct_type(struct lxl_lexer *self) {
     return LXL_LEXER__GET_KIND(self, get_punct_type);
 }
 
+
+void lxl_lexer__on_linefeed_hook_builtin_emit_line_ending(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_EmitLineEndingToken;
+}
 
 // END LEXER INTERNAL INTERFACE.
 

@@ -217,6 +217,7 @@ struct lxl_lexer {
 
     // Hook functions (called at specific times).
     void (*before_token_hook)(struct lxl_lexer *self);      // Called at the start of token lexing.
+    void (*on_linefeed_hook)(struct lxl_lexer *self);       // Called when a linefeed ('\n') is encountered.
     void (*after_whitespace_hook)(struct lxl_lexer *self);  // Called after whitespace has been skipped.
     void (*before_integer_hook)(struct lxl_lexer *self);    // Called before integer lexing.*
     void (*after_integer_hook)(struct lxl_lexer *self);     // Called after integer lexing.**
@@ -300,6 +301,9 @@ struct lxl_token lxl_lexer_next_token(struct lxl_lexer *lexer);
 // Standard lexer state function signifying that the lexer is ready to begin lexing the next token.
 void lxl_lstate_Ready(struct lxl_lexer *self);
 
+// Standard lexer state function signifying that the lexer should skip whitespace.
+void lxl_lstate_SkipWhitespace(struct lxl_lexer *self);
+
 // Standard lexer state function signifying that the lexer should start a new token.
 void lxl_lstate_BeginToken(struct lxl_lexer *self);
 
@@ -320,6 +324,9 @@ void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should emit an end token.
 void lxl_lstate_EmitEndToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should emit a line ending token.
+void lxl_lstate_EmitLineEndingToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifying thtat the lexer should emit a word token.
 void lxl_lstate_EmitWordToken(struct lxl_lexer *self);
@@ -458,6 +465,11 @@ int lxl_lexer__get_int_type(struct lxl_lexer *self);
 int lxl_lexer__get_float_type(struct lxl_lexer *self);
 int lxl_lexer__get_punct_type(struct lxl_lexer *self);
 
+
+/* Lexer built-in hook functions. */
+
+// Built-in `.on_linefeed_hook()` which emits a line ending token.
+void lxl_lexer__on_linefeed_hook_builtin_emit_line_ending(struct lxl_lexer *self);
 
 // END LEXER INTERNAL INTERFACE.
 
