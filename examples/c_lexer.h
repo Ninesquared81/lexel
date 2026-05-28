@@ -130,6 +130,12 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src);
 // Return a string view of the name for the given C token type.
 struct lxl_string_view c_token_kind_name(enum c_token_type type);
 
+// Escape a character.
+const char *escape_char(char ch);
+
+// Show a token.
+void show_token(struct lxl_token token);
+
 // Match an initial word-constituent character for C tokens -- [A-Za-z_].
 bool match_word_init_char(struct lxl_lexer *self);
 

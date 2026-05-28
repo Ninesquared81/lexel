@@ -9,12 +9,7 @@ int main(void) {
         LXL_SV_FROM_STRLIT_INIT("int main(void) {\n\tassert(1 + 1 == 2);\n}\n");
     struct lxl_lexer lexer = create_c_lexer(src);
     for (struct lxl_token token; !LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer));) {
-        struct lxl_string_view token_sv = lxl_token_value(token);
-        struct lxl_string_view kind_sv = c_token_kind_name(token.kind);
-        printf("%-32"LXL_SV_FMT_SPC" %"LXL_SV_FMT_SPC"\n",
-               LXL_SV_FMT_ARG(kind_sv),
-               LXL_SV_FMT_ARG(token_sv)
-            );
+        show_token(token);
     }
     return 0;
 }
@@ -31,15 +26,51 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_int_type = get_int_type;
     lexer.get_float_type = get_float_type;
     lexer.get_punct_type = get_punct_type;
+
+    lexer.on_linefeed_hook = lxl_lexer__on_linefeed_hook_builtin_emit_line_ending;
     return lexer;
 }
 
 struct lxl_string_view c_token_kind_name(enum c_token_type type) {
+    if ((int)type == LXL_TOKENS_END) {
+        return LXL_SV_FROM_STRLIT("LXL_TOKENS_END");
+    }
+    if ((int)type == LXL_TOKEN_LINE_ENDING) {
+        return LXL_SV_FROM_STRLIT("LXL_TOKEN_LINE_ENDING");
+    }
     static struct lxl_string_view names[] = {
         C_TOKENS(C_TOKENS_STRING_TABLE)
     };
-    LXL_ASSERT(0 <= type && type < sizeof names / sizeof names[0]);
+    LXL_ASSERT(0 <= (int)type && type < sizeof names / sizeof names[0]);
     return names[type];
+}
+
+const char *escape_char(char ch) {
+    switch (ch) {
+    case '\n': return "\\n";
+    case '\t': return "\\t";
+    case '\f': return "\\f";
+    case '\v': return "\\v";
+    case '\r': return "\\r";
+    }
+    static char ch_buf[5];
+    if (isprint(ch)) {
+        snprintf(ch_buf, sizeof ch_buf, "%c", ch);
+    }
+    else {
+        snprintf(ch_buf, sizeof ch_buf, "\\%o", (unsigned)ch);
+    }
+    return ch_buf;
+}
+
+void show_token(struct lxl_token token) {
+    struct lxl_string_view kind_sv = c_token_kind_name(token.kind);
+    printf("%-32"LXL_SV_FMT_SPC"", LXL_SV_FMT_ARG(kind_sv));
+    for (const char *p = token.start; p < token.end; ++p) {
+        const char *esc = escape_char(*p);
+        printf("%s", esc);
+    }
+    printf("\n");
 }
 
 bool match_word_init_char(struct lxl_lexer *self) {
