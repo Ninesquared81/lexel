@@ -435,7 +435,8 @@ const char *lxl_lexer__peek(struct lxl_lexer *lexer);
 lxl_UnicodeCodepoint lxl_lexer__advance(struct lxl_lexer *lexer);
 // Rewind the lexer by a single codepoint.
 void lxl_lexer__rewind(struct lxl_lexer *lexer);
-
+// Undo all lexing on the current token.
+void lxl_lexer__unlex(struct lxl_lexer *lexer);
 
 /* Location handling */
 

@@ -287,6 +287,12 @@ void lxl_lexer__rewind(struct lxl_lexer *lexer) {
     }
 }
 
+void lxl_lexer__unlex(struct lxl_lexer *lexer) {
+    while (lxl_lexer__peek(lexer) > lexer->token.start) {
+        lxl_lexer__rewind(lexer);
+    }
+}
+
 void lxl_lexer__reset_line(struct lxl_lexer *lexer) {
     lxl_lexer__seek_line_start(lexer);
 }
