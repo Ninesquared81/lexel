@@ -162,12 +162,6 @@ enum lxl_lex_error {
     LXL_LERR_INVALID_STRING_CHARACTER = -24,  // The lexer encountered an invalid character in a string-like literal.
 };
 
-// A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
-struct lxl_delim_pair {
-    struct lxl_string_view opener;
-    struct lxl_string_view closer;
-};
-
 // A lexical token.
 // The token's value is stored as a string (via the `start` and `end` pointers).
 // Further processing of this value is left to the caller.
