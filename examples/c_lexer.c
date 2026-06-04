@@ -6,7 +6,14 @@
 
 int main(void) {
     struct lxl_string_view src =
-        LXL_SV_FROM_STRLIT_INIT("int main(void) {\n\tassert(1 + 1 == 2);\n}\n");
+        LXL_SV_FROM_STRLIT_INIT(
+            "int printf(const char *restrict, ...);\n"
+            "\n"
+            "int main(void) {\n"
+            "    assert(1 + 1 == 2);\n"
+            "    printf(\"Hello, World!\\n\");\n"
+            "}\n"
+            );
     struct lxl_lexer lexer = create_c_lexer(src);
     for (struct lxl_token token; !LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer));) {
         show_token(token);
@@ -26,6 +33,7 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_int_type = get_int_type;
     lexer.get_float_type = get_float_type;
     lexer.get_punct_type = get_punct_type;
+    lexer.get_string_type = get_string_type;
 
     lexer.on_linefeed_hook = lxl_lexer__on_linefeed_hook_builtin_emit_line_ending;
     return lexer;
@@ -292,5 +300,15 @@ int get_punct_type(struct lxl_lexer *self) {
     if (lxl_sv_eq_strings(token_sv, "^="))  return CTOK_CARET_EQ;
     if (lxl_sv_eq_strings(token_sv, "|="))  return CTOK_VBAR_EQ;
     if (lxl_sv_eq_strings(token_sv, "||"))  return CTOK_VBAR_VBAR;
+    return LXL_LERR_GENERIC;
+}
+
+int get_string_type(struct lxl_lexer *self) {
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    LXL_ASSERT(token_sv.length >= 2);  // 1 for the opener and 1 for the closer.
+    char opener = token_sv.start[0];
+    if (opener == '"') return CTOK_LIT_STRING;
+    if (opener == '\'') return CTOK_LIT_CHAR;
+    LXL_UNREACHABLE();
     return LXL_LERR_GENERIC;
 }

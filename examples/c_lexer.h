@@ -152,5 +152,6 @@ int get_word_type(struct lxl_lexer *self);
 int get_int_type(struct lxl_lexer *self);
 int get_float_type(struct lxl_lexer *self);
 int get_punct_type(struct lxl_lexer *self);
+int get_string_type(struct lxl_lexer *self);
 
 #endif
