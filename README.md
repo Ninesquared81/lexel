@@ -38,6 +38,7 @@ struct lxl_lexer {
     const char *line_start;
     enum lxl_lex_error error;
     int line;
+    struct lxl_string_view last_string_opener;
     void (*next_state)(struct lxl_lexer *self);
 
     // Query functions.
