@@ -142,6 +142,7 @@ bool match_punct(struct lxl_lexer *self) {
     case '!':
     case '%':
     case '*':
+    case '/':
     case '=':
     case '^':
         /* Either single- or double-character with '='. */
