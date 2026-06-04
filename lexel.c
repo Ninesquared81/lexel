@@ -154,27 +154,27 @@ void lxl_lstate_EmitLineEndingToken(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_EmitWordToken(struct lxl_lexer *self) {
-    self->token.kind = lxl_lexer__get_word_type(self);
+    self->token.kind = lxl_lexer__get_word_kind(self);
     self->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_EmitIntToken(struct lxl_lexer *self) {
-    self->token.kind = lxl_lexer__get_int_type(self);
+    self->token.kind = lxl_lexer__get_int_kind(self);
     self->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_EmitFloatToken(struct lxl_lexer *self) {
-    self->token.kind = lxl_lexer__get_float_type(self);
+    self->token.kind = lxl_lexer__get_float_kind(self);
     self->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_EmitPunctToken(struct lxl_lexer *self) {
-    self->token.kind = lxl_lexer__get_punct_type(self);
+    self->token.kind = lxl_lexer__get_punct_kind(self);
     self->next_state = lxl_lstate_Return;
 }
 
 void lxl_lstate_EmitStringToken(struct lxl_lexer *self) {
-    self->token.kind = lxl_lexer__get_string_type(self);
+    self->token.kind = lxl_lexer__get_string_kind(self);
     self->next_state = lxl_lstate_Return;
 }
 
@@ -436,24 +436,24 @@ bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self) {
 }
 
 
-int lxl_lexer__get_word_type(struct lxl_lexer *self) {
-    return LXL_LEXER__GET_KIND(self, get_word_type);
+int lxl_lexer__get_word_kind(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_word_kind);
 }
 
-int lxl_lexer__get_int_type(struct lxl_lexer *self) {
-    return LXL_LEXER__GET_KIND(self, get_int_type);
+int lxl_lexer__get_int_kind(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_int_kind);
 }
 
-int lxl_lexer__get_float_type(struct lxl_lexer *self) {
-    return LXL_LEXER__GET_KIND(self, get_float_type);
+int lxl_lexer__get_float_kind(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_float_kind);
 }
 
-int lxl_lexer__get_punct_type(struct lxl_lexer *self) {
-    return LXL_LEXER__GET_KIND(self, get_punct_type);
+int lxl_lexer__get_punct_kind(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_punct_kind);
 }
 
-int lxl_lexer__get_string_type(struct lxl_lexer *self) {
-    return LXL_LEXER__GET_KIND(self, get_string_type);
+int lxl_lexer__get_string_kind(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_string_kind);
 }
 
 

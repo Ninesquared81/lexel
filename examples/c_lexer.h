@@ -120,15 +120,15 @@
     X(CTOK_KW_VOLATILE)                   /* volatile */                                        \
     X(CTOK_KW_WHILE)                      /* while */                                           \
 
-enum c_token_type {
+enum c_token_kind {
     C_TOKENS(C_TOKENS_DECLARE)
 };
 
 // Create a lexer capable of lexing C code.
 struct lxl_lexer create_c_lexer(struct lxl_string_view src);
 
-// Return a string view of the name for the given C token type.
-struct lxl_string_view c_token_kind_name(enum c_token_type type);
+// Return a string view of the name for the given C token kind.
+struct lxl_string_view c_token_kind_name(enum c_token_kind kind);
 
 // Escape a character.
 const char *escape_char(char ch);
@@ -148,10 +148,10 @@ bool match_int_prefix(struct lxl_lexer *self);
 // Match a punct token completely.
 bool match_punct(struct lxl_lexer *self);
 
-int get_word_type(struct lxl_lexer *self);
-int get_int_type(struct lxl_lexer *self);
-int get_float_type(struct lxl_lexer *self);
-int get_punct_type(struct lxl_lexer *self);
-int get_string_type(struct lxl_lexer *self);
+int get_word_kind(struct lxl_lexer *self);
+int get_int_kind(struct lxl_lexer *self);
+int get_float_kind(struct lxl_lexer *self);
+int get_punct_kind(struct lxl_lexer *self);
+int get_string_kind(struct lxl_lexer *self);
 
 #endif

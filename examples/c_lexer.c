@@ -28,28 +28,28 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.match_word_char = match_word_char;
     lexer.match_int_prefix = match_int_prefix;
     lexer.match_punct = match_punct;
-    // Token type getters.
-    lexer.get_word_type = get_word_type;
-    lexer.get_int_type = get_int_type;
-    lexer.get_float_type = get_float_type;
-    lexer.get_punct_type = get_punct_type;
-    lexer.get_string_type = get_string_type;
+    // Token kind getters.
+    lexer.get_word_kind = get_word_kind;
+    lexer.get_int_kind = get_int_kind;
+    lexer.get_float_kind = get_float_kind;
+    lexer.get_punct_kind = get_punct_kind;
+    lexer.get_string_kind = get_string_kind;
 
     return lexer;
 }
 
-struct lxl_string_view c_token_kind_name(enum c_token_type type) {
-    if ((int)type == LXL_TOKENS_END) {
+struct lxl_string_view c_token_kind_name(enum c_token_kind kind) {
+    if ((int)kind == LXL_TOKENS_END) {
         return LXL_SV_FROM_STRLIT("LXL_TOKENS_END");
     }
-    if ((int)type == LXL_TOKEN_LINE_ENDING) {
+    if ((int)kind == LXL_TOKEN_LINE_ENDING) {
         return LXL_SV_FROM_STRLIT("LXL_TOKEN_LINE_ENDING");
     }
     static struct lxl_string_view names[] = {
         C_TOKENS(C_TOKENS_STRING_TABLE)
     };
-    LXL_ASSERT(0 <= (int)type && type < sizeof names / sizeof names[0]);
-    return names[type];
+    LXL_ASSERT(0 <= (int)kind && kind < sizeof names / sizeof names[0]);
+    return names[kind];
 }
 
 const char *escape_char(char ch) {
@@ -200,7 +200,7 @@ bool match_punct(struct lxl_lexer *self) {
     return false;
 }
 
-int get_word_type(struct lxl_lexer *self) {
+int get_word_kind(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
     if (lxl_sv_eq_strings(token_sv, "alignas", "_Alignas")) return CTOK_KW_ALIGNAS;
     if (lxl_sv_eq_strings(token_sv, "alignof", "_Alignof")) return CTOK_KW_ALIGNOF;
@@ -260,21 +260,21 @@ int get_word_type(struct lxl_lexer *self) {
     return CTOK_IDENTIFIER;
 }
 
-int get_int_type(struct lxl_lexer *self) {
+int get_int_kind(struct lxl_lexer *self) {
     (void)self;
     return CTOK_LIT_INT;
 }
 
-int get_float_type(struct lxl_lexer *self) {
+int get_float_kind(struct lxl_lexer *self) {
     (void)self;
     return CTOK_LIT_FLOAT;
 }
 
-int get_punct_type(struct lxl_lexer *self) {
+int get_punct_kind(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
     LXL_ASSERT(token_sv.length >= 1);
     if (token_sv.length == 1) {
-        // Single-character tokens have their type as their value.
+        // Single-character tokens have their kind as their value.
         return token_sv.start[0];
     }
     if (lxl_sv_eq_strings(token_sv, "!="))  return CTOK_BANG_EQ;
@@ -302,7 +302,7 @@ int get_punct_type(struct lxl_lexer *self) {
     return LXL_LERR_GENERIC;
 }
 
-int get_string_type(struct lxl_lexer *self) {
+int get_string_kind(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
     LXL_ASSERT(token_sv.length >= 2);  // 1 for the opener and 1 for the closer.
     char opener = token_sv.start[0];

@@ -171,15 +171,15 @@ struct lxl_delim_pair {
 // A lexical token.
 // The token's value is stored as a string (via the `start` and `end` pointers).
 // Further processing of this value is left to the caller.
-// The `kind` determines the type of the token. The meanings of different types
-// is left to the caller, but negative types are reserved by lexel and have special
+// The `kind` determines the kind of the token. The meanings of different kinds
+// is left to the caller, but negative kinds are reserved by lexel and have special
 // meanings. For example, a value of -1 (see LXL_TOKENS_END) denotes the end of the
 // token stream.
 struct lxl_token {
     const char *start;          // The start of the token.
     const char *end;            // The end of the token.
     struct lxl_location loc;    // The location (line, column) of the token in the source.
-    int kind;                   // The type of the lexical token. Negative values have special meanings.
+    int kind;                   // The kind of the lexical token. Negative values have special meanings.
 };
 
 // The main lexer object.
@@ -217,12 +217,12 @@ struct lxl_lexer {
     bool (*match_string_char)(struct lxl_lexer *self);      // Match a character in a string-like literal.
     // -- Default: match any character other than the string closer.
 
-    // Token type functions.
-    int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
-    int (*get_int_type)(struct lxl_lexer *self);            // Get the type of the current int token.
-    int (*get_float_type)(struct lxl_lexer *self);          // Get the type of the current float token.
-    int (*get_punct_type)(struct lxl_lexer *self);          // Get the type of the current punct token.
-    int (*get_string_type)(struct lxl_lexer *self);         // Get the type of the current string-like token.
+    // Token kind functions.
+    int (*get_word_kind)(struct lxl_lexer *self);           // Get the kind of the current word token.
+    int (*get_int_kind)(struct lxl_lexer *self);            // Get the kind of the current int token.
+    int (*get_float_kind)(struct lxl_lexer *self);          // Get the kind of the current float token.
+    int (*get_punct_kind)(struct lxl_lexer *self);          // Get the kind of the current punct token.
+    int (*get_string_kind)(struct lxl_lexer *self);         // Get the kind of the current string-like token.
 
     // Hook functions (called at specific times).
     void (*before_token_hook)(struct lxl_lexer *self);      // Called at the start of token lexing.
@@ -236,7 +236,7 @@ struct lxl_lexer {
     void (*before_error_token_hook)(struct lxl_lexer *self);// Called before an error token is finalised.
     void (*after_token_hook)(struct lxl_lexer *self);       // Called just before token is returned.
     // Notes:
-    // *  these hooks are only called after the respective token type has been determined/guessed.
+    // *  these hooks are only called after the respective token kind has been determined/guessed.
     // ** these hooks are called just before the respective lexing functions return to the caller,
     //    meaning they can change the lexer's status for more advanced control.
 
@@ -252,12 +252,12 @@ struct lxl_lexer {
 // These enums define human-friendly names for the various magic values used by lexel.
 
 enum lxl__token_mvs {
-    LXL_TOKENS_END = -1,           // Special token type signifying the end of the token stream.
-    LXL_TOKEN_UNINIT = -2,         // Special token type for a token whose type is yet to be determined.
-    // LXL_TOKENS_END_ABNORMAL = -3,  // Special token type signifying an abnormal end of the token stream.
-    LXL_TOKEN_LINE_ENDING = -4,    // Special token type signifying the end of a line.
-    LXL_TOKEN_NO_TOKEN = -5,       // Special token type for a non-existant token.
-    // See enum lxl_lex_error for token error types.
+    LXL_TOKENS_END = -1,           // Special token kind signifying the end of the token stream.
+    LXL_TOKEN_UNINIT = -2,         // Special token kind for a token whose kind is yet to be determined.
+    // LXL_TOKENS_END_ABNORMAL = -3,  // Special token kind signifying an abnormal end of the token stream.
+    LXL_TOKEN_LINE_ENDING = -4,    // Special token kind signifying the end of a line.
+    LXL_TOKEN_NO_TOKEN = -5,       // Special token kind for a non-existant token.
+    // See enum lxl_lex_error for token error kinds.
 };
 
 
@@ -491,12 +491,12 @@ bool lxl_lexer__match_whitespace_char_builtin_no_lf(struct lxl_lexer *self);
 bool lxl_lexer__match_int_digit_builtin_hex(struct lxl_lexer *self);
 
 
-/* Lexer token type wrappers. */
-int lxl_lexer__get_word_type(struct lxl_lexer *self);
-int lxl_lexer__get_int_type(struct lxl_lexer *self);
-int lxl_lexer__get_float_type(struct lxl_lexer *self);
-int lxl_lexer__get_punct_type(struct lxl_lexer *self);
-int lxl_lexer__get_string_type(struct lxl_lexer *self);
+/* Lexer token kind wrappers. */
+int lxl_lexer__get_word_kind(struct lxl_lexer *self);
+int lxl_lexer__get_int_kind(struct lxl_lexer *self);
+int lxl_lexer__get_float_kind(struct lxl_lexer *self);
+int lxl_lexer__get_punct_kind(struct lxl_lexer *self);
+int lxl_lexer__get_string_kind(struct lxl_lexer *self);
 
 /* Lexer built-in hook functions. */
 
