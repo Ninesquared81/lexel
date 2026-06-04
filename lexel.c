@@ -66,26 +66,71 @@ void lxl_lstate_LexWordToken(struct lxl_lexer *self) {
 
 void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
     if (!lxl_lexer__match_int_prefix(self)) {
-        self->next_state = lxl_lstate_LexFloatToken;
+        self->next_state = lxl_lstate_LexFloatStart;
         return;
     }
     LXL_LEXER__CALL_HOOK(self, before_integer_hook);
     while (lxl_lexer__match_int_digit(self)) {
         /* Do nothing. */
     }
+    if (lxl_lexer__match_float_radix_sep(self)) {
+        LXL_LEXER__CALL_HOOK(self, before_float_hook);
+        self->next_state = lxl_lstate_LexFloatPartFrac;
+        return;
+    }
+    if (lxl_lexer__match_float_exp_sep(self)) {
+        LXL_LEXER__CALL_HOOK(self, before_float_hook);
+        self->next_state = lxl_lstate_LexFloatPartExp;
+        return;
+    }
     self->next_state = lxl_lstate_EmitIntToken;
     LXL_LEXER__CALL_HOOK(self, after_integer_hook);
 }
 
-void lxl_lstate_LexFloatToken(struct lxl_lexer *self) {
+void lxl_lstate_LexFloatStart(struct lxl_lexer *self) {
     if (!lxl_lexer__match_float_prefix(self)) {
         self->next_state = lxl_lstate_LexPunctToken;
         return;
     }
     LXL_LEXER__CALL_HOOK(self, before_float_hook);
+    self->next_state = lxl_lstate_LexFloatPartInt;
+}
+
+void lxl_lstate_LexFloatPartInt(struct lxl_lexer *self) {
     while (lxl_lexer__match_float_digit(self)) {
         /* Do nothing. */
     }
+    if (lxl_lexer__match_float_radix_sep(self)) {
+        self->next_state = lxl_lstate_LexFloatPartFrac;
+        return;
+    }
+    if (lxl_lexer__match_float_exp_sep(self)) {
+        self->next_state = lxl_lstate_LexFloatPartExp;
+        return;
+    }
+    self->next_state = lxl_lstate_LexFloatEnd;
+}
+
+void lxl_lstate_LexFloatPartFrac(struct lxl_lexer *self) {
+    while (lxl_lexer__match_float_digit(self)) {
+        /* Do nothing. */
+    }
+    if (lxl_lexer__match_float_exp_sep(self)) {
+        self->next_state = lxl_lstate_LexFloatPartExp;
+        return;
+    }
+    self->next_state = lxl_lstate_LexFloatEnd;
+}
+
+void lxl_lstate_LexFloatPartExp(struct lxl_lexer *self) {
+    lxl_lexer__match_float_exp_sign(self);
+    while (lxl_lexer__match_float_digit(self)) {
+        /* Do nothing. */
+    }
+    self->next_state = lxl_lstate_LexFloatEnd;
+}
+
+void lxl_lstate_LexFloatEnd(struct lxl_lexer *self) {
     self->next_state = lxl_lstate_EmitFloatToken;
     LXL_LEXER__CALL_HOOK(self, after_float_hook);
 }
@@ -340,6 +385,18 @@ bool lxl_lexer__match_float_digit(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_float_digit);
 }
 
+bool lxl_lexer__match_float_radix_sep(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_radix_sep);
+}
+
+bool lxl_lexer__match_float_exp_sep(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_exp_sep);
+}
+
+bool lxl_lexer__match_float_exp_sign(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_exp_sign);
+}
+
 bool lxl_lexer__match_punct(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_punct);
 }
@@ -390,10 +447,19 @@ bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self) {
 }
 
 bool lxl_lexer__match_float_digit_default(struct lxl_lexer *self) {
-    lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
-    if (('0' <= ch && ch <= '9') || ch == '.') return true;
-    lxl_lexer__rewind(self);
-    return false;
+    return lxl_lexer__match_int_digit_default(self);
+}
+
+bool lxl_lexer__match_float_radix_sep_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("."));
+}
+
+bool lxl_lexer__match_float_exp_sep_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("eE"));
+}
+
+bool lxl_lexer__match_float_exp_sign_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("-+"));
 }
 
 bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {

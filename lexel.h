@@ -207,7 +207,13 @@ struct lxl_lexer {
     bool (*match_float_prefix)(struct lxl_lexer *self);     // Match a floating-point literal prefix.
     // -- Default: forward to `.match_float_digit()`.
     bool (*match_float_digit)(struct lxl_lexer *self);      // Match a single floating-point digit.
-    // -- Default: match digits `0`-`9` and decimal dot `.`.
+    // -- Default: match digits `0`-`9`.
+    bool (*match_float_radix_sep)(struct lxl_lexer *self);  // Match a floating-point radix separator.
+    // -- Default: match decimal dot `.`.
+    bool (*match_float_exp_sep)(struct lxl_lexer *self);    // Match a floating-point exponent separator.
+    // -- Default: match `e` or `E`.
+    bool (*match_float_exp_sign)(struct lxl_lexer *self);   // Match a floating-point exponent sign.
+    // -- Default: match `-` or `+`.
     bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
     bool (*match_string_opener)(struct lxl_lexer *self);    // Match a string-like opener.
@@ -316,14 +322,30 @@ void lxl_lstate_SkipWhitespace(struct lxl_lexer *self);
 // Standard lexer state function signifying that the lexer should start a new token.
 void lxl_lstate_BeginToken(struct lxl_lexer *self);
 
-// Standard lexer state function signifying that the lexer should try to lex a word.
+// Standard lexer state function signifying that the lexer should try to lex a word token.
 void lxl_lstate_LexWordToken(struct lxl_lexer *self);
 
-// Standard lexer state function signifying that the lexer should try to lex an integer.
+// Standard lexer state function signifying that the lexer should try to lex an integer token.
 void lxl_lstate_LexIntToken(struct lxl_lexer *self);
 
-// Standard lexer state function signifiying that the lexer should try to lex a float.
-void lxl_lstate_LexFloatToken(struct lxl_lexer *self);
+// Standard lexer state function signifying that the lexer should try to lex a floating-point token
+// from the start.
+void lxl_lstate_LexFloatStart(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should lex the integer part of a
+// floating-point token.
+void lxl_lstate_LexFloatPartInt(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should lex the fractional part of a
+// floating-point token.
+void lxl_lstate_LexFloatPartFrac(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should lex the exponent part of a
+// floating-point token.
+void lxl_lstate_LexFloatPartExp(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should finish lexing a floating-point token.
+void lxl_lstate_LexFloatEnd(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should try to lex punctuation.
 void lxl_lstate_LexPunctToken(struct lxl_lexer *self);
@@ -451,6 +473,9 @@ bool lxl_lexer__match_int_prefix(struct lxl_lexer *self);
 bool lxl_lexer__match_int_digit(struct lxl_lexer *self);
 bool lxl_lexer__match_float_prefix(struct lxl_lexer *self);
 bool lxl_lexer__match_float_digit(struct lxl_lexer *self);
+bool lxl_lexer__match_float_radix_sep(struct lxl_lexer *self);
+bool lxl_lexer__match_float_exp_sep(struct lxl_lexer *self);
+bool lxl_lexer__match_float_exp_sign(struct lxl_lexer *self);
 bool lxl_lexer__match_punct(struct lxl_lexer *self);
 bool lxl_lexer__match_string_opener(struct lxl_lexer *self);
 bool lxl_lexer__match_string_closer(struct lxl_lexer *self);
@@ -471,8 +496,14 @@ bool lxl_lexer__match_int_prefix_default(struct lxl_lexer *self);
 bool lxl_lexer__match_int_digit_default(struct lxl_lexer *self);
 // Forward to `lxl_lexer__match_float_digit()`.
 bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self);
-// Match digits `0`-`9` and decimal dot `.`.
+// Match digits `0`-`9`.
 bool lxl_lexer__match_float_digit_default(struct lxl_lexer *self);
+// Match decimal dot `.`
+bool lxl_lexer__match_float_radix_sep_default(struct lxl_lexer *self);
+// Match `e` or `E`.
+bool lxl_lexer__match_float_exp_sep_default(struct lxl_lexer *self);
+// Match `-` or `+`.
+bool lxl_lexer__match_float_exp_sign_default(struct lxl_lexer *self);
 // Always return false.
 bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
 // Match `"` or `'`.
