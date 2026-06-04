@@ -159,6 +159,7 @@ enum lxl_lex_error {
     LXL_LERR_INVALID_FLOAT = -21,     // A floating-point literal was invalid.
     LXL_LERR_UNICODE = -22,           // A Unicode error.
     LXL_LERR_UNRECOGNISED_TOKEN = -23,  // The lexer's input did not match any known tokens.
+    LXL_LERR_INVALID_STRING_CHARACTER = -24,  // The lexer encountered an invalid character in a string-like literal.
 };
 
 // A pair of delimiters for strings and block comments, e.g. "/*" and "*/" for C-style comments.
@@ -189,6 +190,7 @@ struct lxl_lexer {
     const char *line_start;                 // Pointer to the beginning of the current line.
     enum lxl_lex_error error;               // Error code set to the current lexing error.
     int line;                               // The current line number.
+    struct lxl_string_view last_string_opener;  // String view of the last string-like opener.
     void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
     // Query functions.
@@ -208,12 +210,19 @@ struct lxl_lexer {
     // -- Default: match digits `0`-`9` and decimal dot `.`.
     bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
+    bool (*match_string_opener)(struct lxl_lexer *self);    // Match a string-like opener.
+    // -- Default: match `"` or `'`.
+    bool (*match_string_closer)(struct lxl_lexer *self);    // Match a string-like opener.
+    // -- Default: match the last string opener.
+    bool (*match_string_char)(struct lxl_lexer *self);      // Match a character in a string-like literal.
+    // -- Default: match any character other than the string closer.
 
     // Token type functions.
     int (*get_word_type)(struct lxl_lexer *self);           // Get the type of the current word token.
     int (*get_int_type)(struct lxl_lexer *self);            // Get the type of the current int token.
     int (*get_float_type)(struct lxl_lexer *self);          // Get the type of the current float token.
     int (*get_punct_type)(struct lxl_lexer *self);          // Get the type of the current punct token.
+    int (*get_string_type)(struct lxl_lexer *self);         // Get the type of the current string-like token.
 
     // Hook functions (called at specific times).
     void (*before_token_hook)(struct lxl_lexer *self);      // Called at the start of token lexing.
@@ -319,8 +328,20 @@ void lxl_lstate_LexFloatToken(struct lxl_lexer *self);
 // Standard lexer state function signifying that the lexer should try to lex punctuation.
 void lxl_lstate_LexPunctToken(struct lxl_lexer *self);
 
-// Standard lexer state function signifying that the lexer did not recognised the token.
+// Standard lexer state function indicating that the lexer should start to lex a string-like token.
+void lxl_lstate_LexStringStart(struct lxl_lexer *self);
+
+// Standard lexer state function indicating that the lexer should lex the main part of a string-like token.
+void lxl_lstate_LexStringContents(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer did not recognise the token.
 void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer found EOF before a string-like token was closed.
+void lxl_lstate_UnclosedString(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer found an invalid character in a string-like token.
+void lxl_lstate_InvalidStringCharacter(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should emit an end token.
 void lxl_lstate_EmitEndToken(struct lxl_lexer *self);
@@ -339,6 +360,9 @@ void lxl_lstate_EmitFloatToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifying thtat the lexer should emit a punctuation token.
 void lxl_lstate_EmitPunctToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should emit a string-like token.
+void lxl_lstate_EmitStringToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifiying that the lexer should return to the caller.
 void lxl_lstate_Return(struct lxl_lexer *self);
@@ -428,6 +452,9 @@ bool lxl_lexer__match_int_digit(struct lxl_lexer *self);
 bool lxl_lexer__match_float_prefix(struct lxl_lexer *self);
 bool lxl_lexer__match_float_digit(struct lxl_lexer *self);
 bool lxl_lexer__match_punct(struct lxl_lexer *self);
+bool lxl_lexer__match_string_opener(struct lxl_lexer *self);
+bool lxl_lexer__match_string_closer(struct lxl_lexer *self);
+bool lxl_lexer__match_string_char(struct lxl_lexer *self);
 
 
 /* Lexer default match functions. */
@@ -448,7 +475,12 @@ bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self);
 bool lxl_lexer__match_float_digit_default(struct lxl_lexer *self);
 // Always return false.
 bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
-
+// Match `"` or `'`.
+bool lxl_lexer__match_string_opener_default(struct lxl_lexer *self);
+// Match the last string opener.
+bool lxl_lexer__match_string_closer_default(struct lxl_lexer *self);
+// Match any character other than the string closer.
+bool lxl_lexer__match_string_char_default(struct lxl_lexer *self);
 
 /* Lexer built-in match functions. */
 
@@ -464,7 +496,7 @@ int lxl_lexer__get_word_type(struct lxl_lexer *self);
 int lxl_lexer__get_int_type(struct lxl_lexer *self);
 int lxl_lexer__get_float_type(struct lxl_lexer *self);
 int lxl_lexer__get_punct_type(struct lxl_lexer *self);
-
+int lxl_lexer__get_string_type(struct lxl_lexer *self);
 
 /* Lexer built-in hook functions. */
 

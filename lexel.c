@@ -1,3 +1,4 @@
+
 #include <string.h>         // strlen.
 
 #include "lexel.h"
@@ -93,12 +94,48 @@ void lxl_lstate_LexPunctToken(struct lxl_lexer *self) {
     bool success = lxl_lexer__match_punct(self);
     self->next_state = (success)
         ? lxl_lstate_EmitPunctToken
-        : lxl_lstate_UnrecognisedToken;
+        : lxl_lstate_LexStringStart;
+}
+
+void lxl_lstate_LexStringStart(struct lxl_lexer *self) {
+    const char *opener_start = lxl_lexer__peek(self);
+    if (!lxl_lexer__match_string_opener(self)) {
+        self->next_state = lxl_lstate_UnrecognisedToken;
+        return;
+    }
+    const char *opener_end = lxl_lexer__peek(self);
+    LXL_ASSERT(opener_end > opener_start);
+    self->last_string_opener = lxl_sv_from_startend(opener_start, opener_end);
+    self->next_state = lxl_lstate_LexStringContents;
+}
+
+void lxl_lstate_LexStringContents(struct lxl_lexer *self) {
+    while (!lxl_lexer__match_string_closer(self)) {
+        if (lxl_lexer_is_finished(self)) {
+            self->next_state = lxl_lstate_UnclosedString;
+            return;
+        }
+        if (!lxl_lexer__match_string_char(self)) {
+            self->next_state = lxl_lstate_InvalidStringCharacter;
+            return;
+        }
+    }
+    self->next_state = lxl_lstate_EmitStringToken;
 }
 
 void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self) {
-    lxl_lexer__error(self, LXL_LERR_UNRECOGNISED_TOKEN);
     self->next_state = lxl_lstate_Return;
+    lxl_lexer__error(self, LXL_LERR_UNRECOGNISED_TOKEN);
+}
+
+void lxl_lstate_UnclosedString(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Return;
+    lxl_lexer__error(self, LXL_LERR_UNCLOSED_STRING);
+}
+
+void lxl_lstate_InvalidStringCharacter(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Return;
+    lxl_lexer__error(self, LXL_LERR_INVALID_STRING_CHARACTER);
 }
 
 void lxl_lstate_EmitEndToken(struct lxl_lexer *self) {
@@ -136,13 +173,18 @@ void lxl_lstate_EmitPunctToken(struct lxl_lexer *self) {
     self->next_state = lxl_lstate_Return;
 }
 
+void lxl_lstate_EmitStringToken(struct lxl_lexer *self) {
+    self->token.kind = lxl_lexer__get_string_type(self);
+    self->next_state = lxl_lstate_Return;
+}
+
 void lxl_lstate_Return(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Ready;
     if (self->error) {
         LXL_LEXER__CALL_HOOK(self, before_error_token_hook);
     }
     lxl_lexer__finish_token(self);
     LXL_LEXER__CALL_HOOK(self, after_token_hook);
-    self->next_state = lxl_lstate_Ready;
 }
 
 // END LEXER STATES.
@@ -302,6 +344,18 @@ bool lxl_lexer__match_punct(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_punct);
 }
 
+bool lxl_lexer__match_string_opener(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_string_opener);
+}
+
+bool lxl_lexer__match_string_closer(struct lxl_lexer *self){
+    return LXL_LEXER__CALL_QUERY(self, match_string_closer);
+}
+
+bool lxl_lexer__match_string_char(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_string_char);
+}
+
 
 bool lxl_lexer__match_whitespace_char_default(struct lxl_lexer *self) {
     return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT(LXL_WHITESPACE_CHARS));
@@ -348,6 +402,26 @@ bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {
 }
 
 
+bool lxl_lexer__match_string_opener_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("\"'"));
+}
+
+bool lxl_lexer__match_string_closer_default(struct lxl_lexer *self) {
+    return lxl_lexer__match_string(self, self->last_string_opener);
+}
+
+bool lxl_lexer__match_string_char_default(struct lxl_lexer *self) {
+    const char *mark = lxl_lexer__peek(self);
+    if (lxl_lexer__match_string_closer(self)) {
+        const char *point = lxl_lexer__peek(self);
+        ptrdiff_t bytes_read = point - mark;
+        self->stream.cursor -= bytes_read;
+        return false;
+    }
+    lxl_lexer__advance(self);
+    return true;
+}
+
 bool lxl_lexer__match_whitespace_char_builtin_no_lf(struct lxl_lexer *self) {
     char ch = *lxl_lexer__peek(self);
     if (ch == '\n') {
@@ -376,6 +450,10 @@ int lxl_lexer__get_float_type(struct lxl_lexer *self) {
 
 int lxl_lexer__get_punct_type(struct lxl_lexer *self) {
     return LXL_LEXER__GET_KIND(self, get_punct_type);
+}
+
+int lxl_lexer__get_string_type(struct lxl_lexer *self) {
+    return LXL_LEXER__GET_KIND(self, get_string_type);
 }
 
 
