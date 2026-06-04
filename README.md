@@ -48,16 +48,24 @@ struct lxl_lexer {
     bool (*match_int_digit)(struct lxl_lexer *self);
     bool (*match_float_prefix)(struct lxl_lexer *self);
     bool (*match_float_digit)(struct lxl_lexer *self);
+    bool (*match_float_radix_sep)(struct lxl_lexer *self);
+    bool (*match_float_exp_sep)(struct lxl_lexer *self);
+    bool (*match_float_exp_sign)(struct lxl_lexer *self);
     bool (*match_punct)(struct lxl_lexer *self);
+    bool (*match_string_opener)(struct lxl_lexer *self);
+    bool (*match_string_closer)(struct lxl_lexer *self);
+    bool (*match_string_char)(struct lxl_lexer *self);
 
     // Token type functions.
     int (*get_word_type)(struct lxl_lexer *self);
     int (*get_int_type)(struct lxl_lexer *self);
     int (*get_float_type)(struct lxl_lexer *self);
     int (*get_punct_type)(struct lxl_lexer *self);
+    int (*get_string_kind)(struct lxl_lexer *self);
 
     // Hook functions (called at specific times).
     void (*before_token_hook)(struct lxl_lexer *self);
+    void (*on_linefeed_hook)(struct lxl_lexer *self);
     void (*after_whitespace_hook)(struct lxl_lexer *self);
     void (*before_integer_hook)(struct lxl_lexer *self);
     void (*after_integer_hook)(struct lxl_lexer *self);
