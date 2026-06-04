@@ -35,7 +35,6 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_punct_type = get_punct_type;
     lexer.get_string_type = get_string_type;
 
-    lexer.on_linefeed_hook = lxl_lexer__on_linefeed_hook_builtin_emit_line_ending;
     return lexer;
 }
 
