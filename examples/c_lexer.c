@@ -11,6 +11,9 @@ int main(void) {
             "\n"
             "int main(void) {\n"
             "    assert(1 + 1 == 2);\n"
+            "    float x = 42.;\n"
+            "    float y = x + .5;\n"
+            ".\n"
             "    printf(\"Hello, World!\\n\");\n"
             "}\n"
             );
