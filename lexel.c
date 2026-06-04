@@ -547,6 +547,7 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_INVALID_FLOAT:    return LXL_SV_FROM_STRLIT("Invlaid floating-point literal");
     case LXL_LERR_UNICODE:          return LXL_SV_FROM_STRLIT("Unicode error");
     case LXL_LERR_UNRECOGNISED_TOKEN: return LXL_SV_FROM_STRLIT("Unknown token");
+    case LXL_LERR_INVALID_STRING_CHARACTER: return LXL_SV_FROM_STRLIT("Invalid character in string-like literal");
     }
     LXL_UNREACHABLE();
     return (struct lxl_string_view) {0};
