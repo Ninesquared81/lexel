@@ -88,6 +88,17 @@ void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_LexFloatStart(struct lxl_lexer *self) {
+    if (lxl_lexer__match_float_radix_sep(self)) {
+        // Allow floats to start `.(digit)`.
+        if (!lxl_lexer__match_float_digit(self)) {
+            lxl_lexer__unlex(self);
+            self->next_state = lxl_lstate_LexPunctToken;
+            return;
+        }
+        LXL_LEXER__CALL_HOOK(self, before_float_hook);
+        self->next_state = lxl_lstate_LexFloatPartFrac;
+        return;
+    }
     if (!lxl_lexer__match_float_prefix(self)) {
         self->next_state = lxl_lstate_LexPunctToken;
         return;
