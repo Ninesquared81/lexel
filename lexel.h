@@ -153,7 +153,7 @@ enum lxl_lex_error {
     LXL_LERR_OK = 0,                  // No error.
     LXL_LERR_GENERIC = -16,           // Generic error.
     LXL_LERR_EOF = -17,               // Unexepected EOF.
-    LXL_LERR_UNCLOSED_COMMENT = -18,  // A block comment had no closing delimiter before the end.
+    LXL_LERR_UNCLOSED_BLOCK_COMMENT = -18,  // A block comment had no closing delimiter before the end.
     LXL_LERR_UNCLOSED_STRING = -19,   // A string-like literal had no closing delimiter before the end.
     LXL_LERR_INVALID_INTEGER = -20,   // An integer literal was invalid (e.g. had a prefix but no payload).
     LXL_LERR_INVALID_FLOAT = -21,     // A floating-point literal was invalid.
@@ -190,6 +190,12 @@ struct lxl_lexer {
     // Query functions.
     bool (*match_whitespace_char)(struct lxl_lexer *self);  // Match a single whitespace character.
     // -- Default: match any of the characters in `LXL_WHITESPACE_CHARS`.
+    bool (*match_comment_line_opener)(struct lxl_lexer *self);  // Match a line comment opener.
+    // -- Default: always return false.
+    bool (*match_comment_block_opener)(struct lxl_lexer *self);  // Match a block comment opener.
+    // -- Default: always return false.
+    bool (*match_comment_block_closer)(struct lxl_lexer *self);  // Match a block comment closer.
+    // -- Default: always return false.
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
     // -- Default: forward to `.match_word_char()`.
     bool (*match_word_char)(struct lxl_lexer *self);        // Match a single word-constituent character.
@@ -312,6 +318,15 @@ void lxl_lstate_Ready(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should skip whitespace.
 void lxl_lstate_SkipWhitespace(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should skip a line comment.
+void lxl_lstate_SkipLineComment(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should skip a block comment.
+void lxl_lstate_SkipBlockComment(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer found EOF before the end of a block comment.
+void lxl_lstate_UnclosedBlockComment(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should start a new token.
 void lxl_lstate_BeginToken(struct lxl_lexer *self);
@@ -446,10 +461,12 @@ struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer);
 
 /* General lexing. */
 
-// Skip whitespace at the start of a token.
+// Skip up to one line of whitespace at the start of a token.
 // Return number of bytes skipped.
-ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer);
-
+ptrdiff_t lxl_lexer__skip_whitespace_line(struct lxl_lexer *lexer);
+// Skip a single line of characters, ignoring them.
+// Return number of bytes skipped.
+ptrdiff_t lxl_lexer__skip_line(struct lxl_lexer *lexer);
 
 /* Lexer general matching functions. */
 
@@ -462,6 +479,9 @@ bool lxl_lexer__match_string(struct lxl_lexer *lexer, struct lxl_string_view str
 /* Lexer match function wrappers. */
 
 bool lxl_lexer__match_whitespace_char(struct lxl_lexer *self);
+bool lxl_lexer__match_comment_line_opener(struct lxl_lexer *self);
+bool lxl_lexer__match_comment_block_opener(struct lxl_lexer *self);
+bool lxl_lexer__match_comment_block_closer(struct lxl_lexer *self);
 bool lxl_lexer__match_word_init_char(struct lxl_lexer *self);
 bool lxl_lexer__match_word_char(struct lxl_lexer *self);
 bool lxl_lexer__match_int_prefix(struct lxl_lexer *self);
@@ -481,6 +501,12 @@ bool lxl_lexer__match_string_char(struct lxl_lexer *self);
 
 // Match any whitespace character in `LXL_WHITESPACE`
 bool lxl_lexer__match_whitespace_char_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_comment_line_opener_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_comment_block_opener_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_comment_block_closer_default(struct lxl_lexer *self);
 // Forward to `lxl_lexer__match_word_char()`.
 bool lxl_lexer__match_word_init_char_default(struct lxl_lexer *self);
 // Match any non-whitespace character (determined by `lxl_lexer__match_whitespace_char()`).

@@ -41,8 +41,53 @@ void lxl_lstate_Ready(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_SkipWhitespace(struct lxl_lexer *self) {
-    lxl_lexer__skip_whitespace(self);
-    // NOTE: state set by `lxl_lexer__skip_whitespace()`.
+    if (lxl_lexer__match_comment_line_opener(self)) {
+        self->next_state = lxl_lstate_SkipLineComment;
+        return;
+    }
+    if (lxl_lexer__match_comment_block_opener(self)) {
+        self->next_state = lxl_lstate_SkipBlockComment;
+        return;
+    }
+    if (!lxl_lexer__skip_whitespace_line(self)) {
+        self->next_state = lxl_lstate_BeginToken;
+        return;
+    }
+    if (lxl_lexer__peek(self)[-1] == '\n') {
+        LXL_ASSERT(self->stream.cursor > 0);
+        LXL_LEXER__CALL_HOOK(self, on_linefeed_hook);
+        return;
+    }
+    // Keep skipping whitespace.
+    LXL_ASSERT(self->next_state == lxl_lstate_SkipWhitespace);
+}
+
+void lxl_lstate_SkipLineComment(struct lxl_lexer *self) {
+    if (lxl_lexer__skip_line(self) > 0 && !lxl_lexer_is_finished(self)) {
+        LXL_ASSERT(self->stream.cursor > 0);
+        LXL_ASSERT(lxl_lexer__peek(self)[-1] == '\n');
+        // Handle newline in whitespace skipping.
+        lxl_lexer__rewind(self);
+    }
+    // Continue skipping whitespace.
+    self->next_state = lxl_lstate_SkipWhitespace;
+}
+
+void lxl_lstate_SkipBlockComment(struct lxl_lexer *self) {
+    while (!lxl_lexer__match_comment_block_closer(self)) {
+        if (lxl_lexer_is_finished(self)) {
+            self->next_state = lxl_lstate_UnclosedBlockComment;
+            return;
+        }
+        lxl_lexer__advance(self);
+    }
+    // Continue skipping whitespace.
+    self->next_state = lxl_lstate_SkipWhitespace;
+}
+
+void lxl_lstate_UnclosedBlockComment(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Return;
+    lxl_lexer__error(self, LXL_LERR_UNCLOSED_BLOCK_COMMENT);
 }
 
 void lxl_lstate_BeginToken(struct lxl_lexer *self) {
@@ -330,16 +375,23 @@ struct lxl_location lxl_lexer__get_location(struct lxl_lexer *lexer) {
     };
 }
 
-ptrdiff_t lxl_lexer__skip_whitespace(struct lxl_lexer *lexer) {
+ptrdiff_t lxl_lexer__skip_whitespace_line(struct lxl_lexer *lexer) {
     const char *skip_start = lxl_lexer__peek(lexer);
     while (lxl_lexer__match_whitespace_char(lexer)) {
         if (lexer->stream.cursor > 0 && lxl_lexer__peek(lexer)[-1] == '\n') {
-            LXL_LEXER__CALL_HOOK(lexer, on_linefeed_hook);
-            goto next_state;
+            break;
         }
     }
-    lexer->next_state = lxl_lstate_BeginToken;
-next_state: ;
+    const char *skip_end = lxl_lexer__peek(lexer);
+    return skip_end - skip_start;
+}
+
+ptrdiff_t lxl_lexer__skip_line(struct lxl_lexer *lexer) {
+    const char *skip_start = lxl_lexer__peek(lexer);
+    while (!lxl_lexer__match_string(lexer, LXL_SV_FROM_STRLIT("\n"))) {
+        if (lxl_lexer_is_finished(lexer)) break;
+        lxl_lexer__advance(lexer);
+    }
     const char *skip_end = lxl_lexer__peek(lexer);
     return skip_end - skip_start;
 }
@@ -376,6 +428,18 @@ fail:
 
 bool lxl_lexer__match_whitespace_char(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_whitespace_char);
+}
+
+bool lxl_lexer__match_comment_line_opener(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_comment_line_opener);
+}
+
+bool lxl_lexer__match_comment_block_opener(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_comment_block_opener);
+}
+
+bool lxl_lexer__match_comment_block_closer(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_comment_block_closer);
 }
 
 bool lxl_lexer__match_word_init_char(struct lxl_lexer *self) {
@@ -435,6 +499,21 @@ bool lxl_lexer__match_whitespace_char_default(struct lxl_lexer *self) {
     return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT(LXL_WHITESPACE_CHARS));
 }
 
+bool lxl_lexer__match_comment_line_opener_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
+bool lxl_lexer__match_comment_block_opener_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
+bool lxl_lexer__match_comment_block_closer_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
 bool lxl_lexer__match_word_init_char_default(struct lxl_lexer *self) {
     return lxl_lexer__match_word_char(self);
 }
@@ -483,7 +562,6 @@ bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {
     (void)self;
     return false;
 }
-
 
 bool lxl_lexer__match_string_opener_default(struct lxl_lexer *self) {
     return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("\"'"));
@@ -558,7 +636,7 @@ struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
     case LXL_LERR_OK:               return LXL_SV_FROM_STRLIT("No error");
     case LXL_LERR_GENERIC:          return LXL_SV_FROM_STRLIT("Generic error");
     case LXL_LERR_EOF:              return LXL_SV_FROM_STRLIT("Unexpected end of input");
-    case LXL_LERR_UNCLOSED_COMMENT: return LXL_SV_FROM_STRLIT("Unclosed comment");
+    case LXL_LERR_UNCLOSED_BLOCK_COMMENT: return LXL_SV_FROM_STRLIT("Unclosed block comment");
     case LXL_LERR_UNCLOSED_STRING:  return LXL_SV_FROM_STRLIT("Unclosed string or string-like literal");
     case LXL_LERR_INVALID_INTEGER:  return LXL_SV_FROM_STRLIT("Invalid integer literal");
     case LXL_LERR_INVALID_FLOAT:    return LXL_SV_FROM_STRLIT("Invlaid floating-point literal");
