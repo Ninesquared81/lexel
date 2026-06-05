@@ -748,6 +748,10 @@ const char *lxl_sv_end(struct lxl_string_view sv) {
     return &sv.start[sv.length];
 }
 
+bool lxl_sv_is_empty(struct lxl_string_view sv) {
+    return sv.length == 0;
+}
+
 ptrdiff_t lxl_sv_normalise_index(struct lxl_string_view sv, ptrdiff_t index) {
     if (index < 0) index += sv.length;
     if (index < 0) index = 0;

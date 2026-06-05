@@ -626,6 +626,9 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end);
 // Get a pointer to one past the end of a string view.
 const char *lxl_sv_end(struct lxl_string_view sv);
 
+// Return whether a string view is empty.
+bool lxl_sv_is_empty(struct lxl_string_view sv);
+
 // String view format specifier for use with printf style formatting.
 // Use together with LXL_SV_FMT_ARG to unpack the argument.
 #define LXL_SV_FMT_SPC ".*s"
