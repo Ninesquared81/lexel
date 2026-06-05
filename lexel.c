@@ -841,6 +841,20 @@ bool lxl_sv_has_suffix_strings_impl_vargs(struct lxl_string_view sv, va_list var
     return false;
 }
 
+struct lxl_string_view lxl_sv_remove_predicate_left(struct lxl_string_view sv, int (*pred)(int ch)) {
+    while (!lxl_sv_is_empty(sv) && pred(sv.start[0])) {
+        sv = lxl_sv_slice_end(sv, 1);
+    }
+    return sv;
+}
+
+struct lxl_string_view lxl_sv_remove_predicate_right(struct lxl_string_view sv, int (*pred)(int ch)) {
+    while (!lxl_sv_is_empty(sv) && pred(lxl_sv_end(sv)[-1])) {
+        sv = lxl_sv_slice_start(sv, -1);
+    }
+    return sv;
+}
+
 
 // END STRING VIEW INTERFACE.
 

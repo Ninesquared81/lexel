@@ -696,6 +696,12 @@ bool lxl_sv_has_suffix_strings_impl(struct lxl_string_view sv, ...);
 // passed as a va_list.
 bool lxl_sv_has_suffix_strings_impl_vargs(struct lxl_string_view sv, va_list vargs);
 
+// Remove characters satisfying the given predicate from the start of a string view.
+struct lxl_string_view lxl_sv_remove_predicate_left(struct lxl_string_view sv, int (*pred)(int ch));
+
+// Remove characters satisfying the given predicate from the end of a string view.
+struct lxl_string_view lxl_sv_remove_predicate_right(struct lxl_string_view sv, int (*pred)(int ch));
+
 
 // END STRING VIEW INTERFACE.
 
