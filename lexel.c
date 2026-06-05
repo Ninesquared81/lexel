@@ -52,6 +52,13 @@ void lxl_lstate_SkipWhitespace(struct lxl_lexer *self) {
         self->next_state = lxl_lstate_SkipBlockComment;
         return;
     }
+    if (lxl_lexer__match_comment_block_nest_opener(self)) {
+        const char *opener_end = lxl_lexer__peek(self);
+        self->last_block_comment_opener = lxl_sv_from_startend(opener_start, opener_end);
+        self->block_comment_level = 1;
+        self->next_state = lxl_lstate_SkipNestableBlockComment;
+        return;
+    }
     if (!lxl_lexer__skip_whitespace_line(self)) {
         self->next_state = lxl_lstate_BeginToken;
         return;
@@ -86,6 +93,26 @@ void lxl_lstate_SkipBlockComment(struct lxl_lexer *self) {
     }
     // Continue skipping whitespace.
     self->next_state = lxl_lstate_SkipWhitespace;
+}
+
+void lxl_lstate_SkipNestableBlockComment(struct lxl_lexer *self) {
+    while (!lxl_lexer__match_comment_block_nest_closer(self)) {
+        if (lxl_lexer_is_finished(self)) {
+            self->next_state = lxl_lstate_UnclosedBlockComment;
+            return;
+        }
+        if (lxl_lexer__match_comment_block_nest_opener(self)) {
+            ++self->block_comment_level;
+            return;
+        }
+        lxl_lexer__advance(self);
+    }
+    --self->block_comment_level;
+    LXL_ASSERT(self->block_comment_level >= 0);
+    if (self->block_comment_level == 0) {
+        // Go back to skipping whitespace.
+        self->next_state = lxl_lstate_SkipWhitespace;
+    }
 }
 
 void lxl_lstate_UnclosedBlockComment(struct lxl_lexer *self) {
@@ -448,6 +475,14 @@ bool lxl_lexer__match_comment_block_closer(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_comment_block_closer);
 }
 
+bool lxl_lexer__match_comment_block_nest_opener(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_comment_block_nest_opener);
+}
+
+bool lxl_lexer__match_comment_block_nest_closer(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_comment_block_nest_closer);
+}
+
 bool lxl_lexer__match_word_init_char(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_word_init_char);
 }
@@ -516,6 +551,16 @@ bool lxl_lexer__match_comment_block_opener_default(struct lxl_lexer *self) {
 }
 
 bool lxl_lexer__match_comment_block_closer_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
+bool lxl_lexer__match_comment_block_nest_opener_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
+bool lxl_lexer__match_comment_block_nest_closer_default(struct lxl_lexer *self) {
     (void)self;
     return false;
 }

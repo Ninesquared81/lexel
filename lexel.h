@@ -188,6 +188,7 @@ struct lxl_lexer {
         struct lxl_string_view last_string_opener;  // The last string-like opener.
         struct lxl_string_view last_block_comment_opener;  // The last block comment opener.
     };
+    int block_comment_level;                // The current nesting level of (nestable) block comments.
     void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
     // Query functions.
@@ -199,6 +200,10 @@ struct lxl_lexer {
     // -- Default: always return false.
     bool (*match_comment_block_closer)(struct lxl_lexer *self);  // Match a block comment closer.
     // -- Default: always return false.
+    bool (*match_comment_block_nest_opener)(struct lxl_lexer *self);  // Match a nestable block comment opener.
+    // -- Default: always return false.
+    bool (*match_comment_block_nest_closer)(struct lxl_lexer *self);  // Match a nestable block comment closer.
+    // -- Default: alwys return false.
     bool (*match_word_init_char)(struct lxl_lexer *self);   // Match the FIRST character of a word.
     // -- Default: forward to `.match_word_char()`.
     bool (*match_word_char)(struct lxl_lexer *self);        // Match a single word-constituent character.
@@ -327,6 +332,9 @@ void lxl_lstate_SkipLineComment(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should skip a block comment.
 void lxl_lstate_SkipBlockComment(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should skip a nestable block comment.
+void lxl_lstate_SkipNestableBlockComment(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer found EOF before the end of a block comment.
 void lxl_lstate_UnclosedBlockComment(struct lxl_lexer *self);
@@ -485,6 +493,8 @@ bool lxl_lexer__match_whitespace_char(struct lxl_lexer *self);
 bool lxl_lexer__match_comment_line_opener(struct lxl_lexer *self);
 bool lxl_lexer__match_comment_block_opener(struct lxl_lexer *self);
 bool lxl_lexer__match_comment_block_closer(struct lxl_lexer *self);
+bool lxl_lexer__match_comment_block_nest_opener(struct lxl_lexer *self);
+bool lxl_lexer__match_comment_block_nest_closer(struct lxl_lexer *self);
 bool lxl_lexer__match_word_init_char(struct lxl_lexer *self);
 bool lxl_lexer__match_word_char(struct lxl_lexer *self);
 bool lxl_lexer__match_int_prefix(struct lxl_lexer *self);
@@ -510,6 +520,10 @@ bool lxl_lexer__match_comment_line_opener_default(struct lxl_lexer *self);
 bool lxl_lexer__match_comment_block_opener_default(struct lxl_lexer *self);
 // Always return false.
 bool lxl_lexer__match_comment_block_closer_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_comment_block_nest_opener_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_comment_block_nest_closer_default(struct lxl_lexer *self);
 // Forward to `lxl_lexer__match_word_char()`.
 bool lxl_lexer__match_word_init_char_default(struct lxl_lexer *self);
 // Match any non-whitespace character (determined by `lxl_lexer__match_whitespace_char()`).
