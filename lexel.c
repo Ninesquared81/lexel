@@ -286,6 +286,7 @@ void lxl_lstate_Return(struct lxl_lexer *self) {
     }
     lxl_lexer__finish_token(self);
     LXL_LEXER__CALL_HOOK(self, after_token_hook);
+    self->error = LXL_LERR_OK;  // Clear error.
 }
 
 // END LEXER STATES.
