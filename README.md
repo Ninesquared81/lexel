@@ -112,15 +112,21 @@ must be used to splice them into the state control flow.
 #### Query functions
 
 The next group of fields are called the "query functions". These user-provided functions are
-used to determine how to lex certain tokens. All query function  have default behaviours
-which may or may not be good enough for a user's needs.
+used to determine how to lex certain tokens. All query functions have default behaviours
+which may or may not be good enough for a user's needs. Note that the default behaviour for
+`.match_word_char()` overshadows later query functions, matchin any non-whitespace tokens.
 
 #### Hook functions
 
 Next come the hook functions. These are the main source of customisation for lexel. Hook
 functions are simply functions which are called at certain well-defined points in the
 execution of the lexer. They take a pointer to the lexer (which they may modify) and
-return `void`. All hook functions are optional.
+return `void`. All hook functions are optional. The names of hook functions are of the
+form **before**/**on**/**after** _event_ **hook**.
+
+Unlike query functions, hook functions exist soley to allow the user to interact with the
+lexer. They do not send any data back to the lexer in and of themselves. See the [C lexer
+example](examples/c_lexer.c) for a demonstration of hook functions in action.
 
 #### Extensions
 
