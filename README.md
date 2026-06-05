@@ -52,14 +52,17 @@ struct lxl_lexer {
     bool (*match_comment_block_closer)(struct lxl_lexer *self);
     bool (*match_comment_block_nest_opener)(struct lxl_lexer *self);
     bool (*match_comment_block_nest_closer)(struct lxl_lexer *self);
+    bool (*match_word_init_char)(struct lxl_lexer *self);
     bool (*match_word_char)(struct lxl_lexer *self);
     bool (*match_int_prefix)(struct lxl_lexer *self);
     bool (*match_int_digit)(struct lxl_lexer *self);
+    bool (*match_int_suffix)(struct lxl_lexer *self);
     bool (*match_float_prefix)(struct lxl_lexer *self);
     bool (*match_float_digit)(struct lxl_lexer *self);
     bool (*match_float_radix_sep)(struct lxl_lexer *self);
     bool (*match_float_exp_sep)(struct lxl_lexer *self);
     bool (*match_float_exp_sign)(struct lxl_lexer *self);
+    bool (*match_float_suffix)(struct lxl_lexer *self);
     bool (*match_punct)(struct lxl_lexer *self);
     bool (*match_string_opener)(struct lxl_lexer *self);
     bool (*match_string_closer)(struct lxl_lexer *self);
@@ -79,6 +82,8 @@ struct lxl_lexer {
     void (*before_integer_hook)(struct lxl_lexer *self);
     void (*after_integer_hook)(struct lxl_lexer *self);
     void (*before_float_hook)(struct lxl_lexer *self);
+    void (*before_float_frac_hook)(struct lxl_lexer *self);
+    void (*before_float_exp_hook)(struct lxl_lexer *self);
     void (*after_float_hook)(struct lxl_lexer *self);
     void (*on_error_hook)(struct lxl_lexer *self);
     void (*before_error_token_hook)(struct lxl_lexer *self);
