@@ -212,6 +212,8 @@ struct lxl_lexer {
     // -- Default: forward to `.match_int_digit()`.
     bool (*match_int_digit)(struct lxl_lexer *self);        // Match a single integer digit.
     // -- Default: match digits `0`-`9`.
+    bool (*match_int_suffix)(struct lxl_lexer *self);       // Match an integer literal suffix (e.g. `ULL`).
+    // -- Default: always return false.
     bool (*match_float_prefix)(struct lxl_lexer *self);     // Match a floating-point literal prefix.
     // -- Default: forward to `.match_float_digit()`.
     bool (*match_float_digit)(struct lxl_lexer *self);      // Match a single floating-point digit.
@@ -222,6 +224,8 @@ struct lxl_lexer {
     // -- Default: match `e` or `E`.
     bool (*match_float_exp_sign)(struct lxl_lexer *self);   // Match a floating-point exponent sign.
     // -- Default: match `-` or `+`.
+    bool (*match_float_suffix)(struct lxl_lexer *self);     // Match a floating-point literal suffix.
+    // -- Default: always return false.
     bool (*match_punct)(struct lxl_lexer *self);            // Match a punct token completely.
     // -- Default: always return false.
     bool (*match_string_opener)(struct lxl_lexer *self);    // Match a string-like opener.
@@ -499,11 +503,13 @@ bool lxl_lexer__match_word_init_char(struct lxl_lexer *self);
 bool lxl_lexer__match_word_char(struct lxl_lexer *self);
 bool lxl_lexer__match_int_prefix(struct lxl_lexer *self);
 bool lxl_lexer__match_int_digit(struct lxl_lexer *self);
+bool lxl_lexer__match_int_suffix(struct lxl_lexer *self);
 bool lxl_lexer__match_float_prefix(struct lxl_lexer *self);
 bool lxl_lexer__match_float_digit(struct lxl_lexer *self);
 bool lxl_lexer__match_float_radix_sep(struct lxl_lexer *self);
 bool lxl_lexer__match_float_exp_sep(struct lxl_lexer *self);
 bool lxl_lexer__match_float_exp_sign(struct lxl_lexer *self);
+bool lxl_lexer__match_float_suffix(struct lxl_lexer *self);
 bool lxl_lexer__match_punct(struct lxl_lexer *self);
 bool lxl_lexer__match_string_opener(struct lxl_lexer *self);
 bool lxl_lexer__match_string_closer(struct lxl_lexer *self);
@@ -532,6 +538,8 @@ bool lxl_lexer__match_word_char_default(struct lxl_lexer *self);
 bool lxl_lexer__match_int_prefix_default(struct lxl_lexer *self);
 // Match digits `0`-`9`.
 bool lxl_lexer__match_int_digit_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_int_suffix_default(struct lxl_lexer *self);
 // Forward to `lxl_lexer__match_float_digit()`.
 bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self);
 // Match digits `0`-`9`.
@@ -542,6 +550,8 @@ bool lxl_lexer__match_float_radix_sep_default(struct lxl_lexer *self);
 bool lxl_lexer__match_float_exp_sep_default(struct lxl_lexer *self);
 // Match `-` or `+`.
 bool lxl_lexer__match_float_exp_sign_default(struct lxl_lexer *self);
+// Always return false.
+bool lxl_lexer__match_float_suffix_default(struct lxl_lexer *self);
 // Always return false.
 bool lxl_lexer__match_punct_default(struct lxl_lexer *self);
 // Match `"` or `'`.

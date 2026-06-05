@@ -158,6 +158,7 @@ void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
         self->next_state = lxl_lstate_LexFloatPartExp;
         return;
     }
+    lxl_lexer__match_int_suffix(self);
     self->next_state = lxl_lstate_EmitIntToken;
     LXL_LEXER__CALL_HOOK(self, after_integer_hook);
 }
@@ -217,6 +218,7 @@ void lxl_lstate_LexFloatPartExp(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_LexFloatEnd(struct lxl_lexer *self) {
+    lxl_lexer__match_float_suffix(self);
     self->next_state = lxl_lstate_EmitFloatToken;
     LXL_LEXER__CALL_HOOK(self, after_float_hook);
 }
@@ -499,6 +501,10 @@ bool lxl_lexer__match_int_digit(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_int_digit);
 }
 
+bool lxl_lexer__match_int_suffix(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_int_suffix);
+}
+
 bool lxl_lexer__match_float_prefix(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_float_prefix);
 }
@@ -517,6 +523,10 @@ bool lxl_lexer__match_float_exp_sep(struct lxl_lexer *self) {
 
 bool lxl_lexer__match_float_exp_sign(struct lxl_lexer *self) {
     return LXL_LEXER__CALL_QUERY(self, match_float_exp_sign);
+}
+
+bool lxl_lexer__match_float_suffix(struct lxl_lexer *self) {
+    return LXL_LEXER__CALL_QUERY(self, match_float_suffix);
 }
 
 bool lxl_lexer__match_punct(struct lxl_lexer *self) {
@@ -589,6 +599,11 @@ bool lxl_lexer__match_int_digit_default(struct lxl_lexer *self) {
     return false;
 }
 
+bool lxl_lexer__match_int_suffix_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
+}
+
 bool lxl_lexer__match_float_prefix_default(struct lxl_lexer *self) {
     return lxl_lexer__match_float_digit(self);
 }
@@ -607,6 +622,11 @@ bool lxl_lexer__match_float_exp_sep_default(struct lxl_lexer *self) {
 
 bool lxl_lexer__match_float_exp_sign_default(struct lxl_lexer *self) {
     return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("-+"));
+}
+
+bool lxl_lexer__match_float_suffix_default(struct lxl_lexer *self) {
+    (void)self;
+    return false;
 }
 
 bool lxl_lexer__match_punct_default(struct lxl_lexer *self) {
