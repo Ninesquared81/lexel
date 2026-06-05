@@ -17,6 +17,8 @@ int main(void) {
             "    assert(1 + 1 == 2);\n"
             "    float x = 42.;\n"
             "    float y = x + .5f;\n"
+            "    float z = 0x11.2fp0;\n"
+            "    float alpha = 3.1415f;\n"
             ".\n"
             "    printf(\"Hello, World!\\n\");\n"
             "}\n"
@@ -38,7 +40,9 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.match_word_init_char = match_word_init_char;
     lexer.match_word_char = match_word_char;
     lexer.match_int_prefix = match_int_prefix;
+    lexer.match_int_digit = match_digit_dec;
     lexer.match_int_suffix = match_int_suffix;
+    lexer.match_float_digit = match_digit_dec;
     lexer.match_float_suffix = match_float_suffix;
     lexer.match_punct = match_punct;
     // Token kind getters.
@@ -49,6 +53,8 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_string_kind = get_string_kind;
     // Hook functions.
     lexer.after_integer_hook = after_integer_hook_verify_suffix;
+    lexer.before_float_frac_hook = lexer.before_float_frac_hook;
+    lexer.before_float_exp_hook = lexer.before_float_exp_hook;
     lexer.after_float_hook = after_float_hook_verify_suffix;
 
     return lexer;
@@ -132,12 +138,12 @@ bool match_word_char(struct lxl_lexer *self) {
 
 bool match_int_prefix(struct lxl_lexer *self) {
     lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
-    self->match_int_digit = NULL;  // Use default integer lexer.
+    self->match_int_digit = match_digit_dec;
     if (ch == '0') {
         ch = lxl_lexer__advance(self);
         if (toupper(ch) == 'X') {
             // Hexadecimal.
-            self->match_int_digit = lxl_lexer__match_int_digit_builtin_hex;
+            self->match_int_digit = match_digit_hex;
             return true;
         }
         if (toupper(ch) != 'B') {
@@ -151,6 +157,14 @@ bool match_int_prefix(struct lxl_lexer *self) {
     if ('1' <= ch && ch <= '9') return true;
     lxl_lexer__rewind(self);
     return false;
+}
+
+bool match_digit_dec(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("0123456789'"));
+}
+
+bool match_digit_hex(struct lxl_lexer *self) {
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("0123456789'ABCDEFabcdef"));
 }
 
 bool match_int_suffix(struct lxl_lexer *self) {
@@ -369,7 +383,7 @@ void after_integer_hook_verify_suffix(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
     int (*digit_pred)(int ch) = isdigit;
     if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
-        token_sv = lxl_sv_slice_start(token_sv, 2);
+        token_sv = lxl_sv_slice_end(token_sv, -2);
         digit_pred = isxdigit;
     }
     else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {
@@ -388,11 +402,25 @@ void after_integer_hook_verify_suffix(struct lxl_lexer *self) {
     self->next_state = lxl_lstate_Return;
 }
 
+void before_float_frac_hook(struct lxl_lexer *self) {
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
+        self->match_float_digit = match_digit_hex;
+    }
+    else {
+        self->match_float_digit = match_digit_dec;
+    }
+}
+
+void before_float_exp_hook(struct lxl_lexer *self) {
+    self->match_float_digit = match_digit_dec;
+}
+
 void after_float_hook_verify_suffix(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
     int (*digit_pred)(int ch) = isdigit;
     if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
-        token_sv = lxl_sv_slice_start(token_sv, 2);
+        token_sv = lxl_sv_slice_end(token_sv, -2);
         digit_pred = isxdigit;
     }
     else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {

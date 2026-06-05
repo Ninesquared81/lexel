@@ -154,6 +154,10 @@ bool match_word_char(struct lxl_lexer *self);
 
 // Match an integer literal prefix -- (digit) != 0: decimal, 0: octal, 0x/0X: hexadecimal, 0b/0B: binary.
 bool match_int_prefix(struct lxl_lexer *self);
+// Match a decimal digit -- [0-9'].
+bool match_digit_dec(struct lxl_lexer *self);
+// Match a hexadecimal digit -- [0-9'].
+bool match_digit_hex(struct lxl_lexer *self);
 // Match an integer literal suffix -- u/U and either l/L or ll/LL in any order..
 bool match_int_suffix(struct lxl_lexer *self);
 
@@ -171,6 +175,11 @@ int get_string_kind(struct lxl_lexer *self);
 
 // Verify that the lexed integer token has a valid suffix.
 void after_integer_hook_verify_suffix(struct lxl_lexer *self);
+
+// Switch to the relevant `.match_float_digit()`.
+void before_float_frac_hook(struct lxl_lexer *self);
+// Ensure `.match_float_digit()` is reset to the decimal-only version.
+void before_float_exp_hook(struct lxl_lexer *self);
 // Verify that the lexed float token has a valid suffix.
 void after_float_hook_verify_suffix(struct lxl_lexer *self);
 
