@@ -9,6 +9,10 @@ int main(void) {
         LXL_SV_FROM_STRLIT_INIT(
             "int printf(const char *restrict, ...);\n"
             "\n"
+            "/* This was a triumph.\n"
+            " * I'm making a note here\n"
+            " * HUGE SUCCESS! /**/ @ \n"
+            " */\n"
             "int main(void) {\n"
             "    assert(1 + 1 == 2);\n"
             "    float x = 42.;\n"
@@ -27,6 +31,8 @@ int main(void) {
 struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     struct lxl_lexer lexer = lxl_lexer_new(src);
     // Query functions.
+    lexer.match_comment_block_opener = match_comment_block_opener;
+    lexer.match_comment_block_closer = match_comment_block_closer;
     lexer.match_word_init_char = match_word_init_char;
     lexer.match_word_char = match_word_char;
     lexer.match_int_prefix = match_int_prefix;
@@ -41,17 +47,21 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     return lexer;
 }
 
-struct lxl_string_view c_token_kind_name(enum c_token_kind kind) {
-    if ((int)kind == LXL_TOKENS_END) {
-        return LXL_SV_FROM_STRLIT("LXL_TOKENS_END");
-    }
-    if ((int)kind == LXL_TOKEN_LINE_ENDING) {
-        return LXL_SV_FROM_STRLIT("LXL_TOKEN_LINE_ENDING");
+struct lxl_string_view c_token_kind_name(int kind) {
+    if (kind < 0) {
+        if (kind < LXL_LERR_GENERIC) {
+            return lxl_error_message(kind);
+        }
+        switch ((enum lxl__token_mvs)kind) {
+        case LXL_TOKENS_END: return LXL_SV_FROM_STRLIT("End of tokens");
+        case LXL_TOKEN_UNINIT: return LXL_SV_FROM_STRLIT("Unitialised token");
+        default: return LXL_SV_FROM_STRLIT("???");
+        }
     }
     static struct lxl_string_view names[] = {
         C_TOKENS(C_TOKENS_STRING_TABLE)
     };
-    LXL_ASSERT(0 <= (int)kind && kind < sizeof names / sizeof names[0]);
+    LXL_ASSERT(0 <= kind && (size_t)kind < sizeof names / sizeof names[0]);
     return names[kind];
 }
 
@@ -81,6 +91,14 @@ void show_token(struct lxl_token token) {
         printf("%s", esc);
     }
     printf("\n");
+}
+
+bool match_comment_block_opener(struct lxl_lexer *self) {
+    return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("/*"));
+}
+
+bool match_comment_block_closer(struct lxl_lexer *self) {
+    return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("*/"));
 }
 
 bool match_word_init_char(struct lxl_lexer *self) {

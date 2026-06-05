@@ -128,13 +128,19 @@ enum c_token_kind {
 struct lxl_lexer create_c_lexer(struct lxl_string_view src);
 
 // Return a string view of the name for the given C token kind.
-struct lxl_string_view c_token_kind_name(enum c_token_kind kind);
+struct lxl_string_view c_token_kind_name(int kind);
 
 // Escape a character.
 const char *escape_char(char ch);
 
 // Show a token.
 void show_token(struct lxl_token token);
+
+// Match a C block comment opener -- /*.
+bool match_comment_block_opener(struct lxl_lexer *self);
+
+// Match a C block comment closer: -- */.
+bool match_comment_block_closer(struct lxl_lexer *self);
 
 // Match an initial word-constituent character for C tokens -- [A-Za-z_].
 bool match_word_init_char(struct lxl_lexer *self);
