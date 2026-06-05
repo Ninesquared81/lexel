@@ -65,11 +65,11 @@ struct lxl_lexer {
     bool (*match_string_closer)(struct lxl_lexer *self);
     bool (*match_string_char)(struct lxl_lexer *self);
 
-    // Token type functions.
-    int (*get_word_type)(struct lxl_lexer *self);
-    int (*get_int_type)(struct lxl_lexer *self);
-    int (*get_float_type)(struct lxl_lexer *self);
-    int (*get_punct_type)(struct lxl_lexer *self);
+    // Token kind functions.
+    int (*get_word_kind)(struct lxl_lexer *self);
+    int (*get_int_kind)(struct lxl_lexer *self);
+    int (*get_float_kind)(struct lxl_lexer *self);
+    int (*get_punct_kind)(struct lxl_lexer *self);
     int (*get_string_kind)(struct lxl_lexer *self);
 
     // Hook functions (called at specific times).
