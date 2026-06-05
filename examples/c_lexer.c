@@ -16,7 +16,7 @@ int main(void) {
             "int main(void) {\n"
             "    assert(1 + 1 == 2);\n"
             "    float x = 42.;\n"
-            "    float y = x + .5;\n"
+            "    float y = x + .5f;\n"
             ".\n"
             "    printf(\"Hello, World!\\n\");\n"
             "}\n"
@@ -38,6 +38,8 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.match_word_init_char = match_word_init_char;
     lexer.match_word_char = match_word_char;
     lexer.match_int_prefix = match_int_prefix;
+    lexer.match_int_suffix = match_int_suffix;
+    lexer.match_float_suffix = match_float_suffix;
     lexer.match_punct = match_punct;
     // Token kind getters.
     lexer.get_word_kind = get_word_kind;
@@ -111,7 +113,6 @@ bool match_comment_block_nest_closer(struct lxl_lexer *self) {
     return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("+/"));
 }
 
-
 bool match_word_init_char(struct lxl_lexer *self) {
     lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
     if (isalpha(ch) || ch == '_') return true;
@@ -146,6 +147,32 @@ bool match_int_prefix(struct lxl_lexer *self) {
     }
     if ('1' <= ch && ch <= '9') return true;
     lxl_lexer__rewind(self);
+    return false;
+}
+
+bool match_int_suffix(struct lxl_lexer *self) {
+    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("uU"))) {
+        (void)(lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))
+               || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("ll"))
+               || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("LL")));
+        return true;
+    }
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("ll"))
+        || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("LL"))
+        || lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))) {
+        lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("uU"));
+        return true;
+    }
+    return false;
+}
+
+bool match_float_suffix(struct lxl_lexer *self) {
+    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("fF"))) {
+        return true;
+    }
+    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))) {
+        return true;
+    }
     return false;
 }
 

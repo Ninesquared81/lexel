@@ -154,6 +154,11 @@ bool match_word_char(struct lxl_lexer *self);
 
 // Match an integer literal prefix -- (digit) != 0: decimal, 0: octal, 0x/0X: hexadecimal, 0b/0B: binary.
 bool match_int_prefix(struct lxl_lexer *self);
+// Match an integer literal suffix -- u/U and either l/L or ll/LL in any order..
+bool match_int_suffix(struct lxl_lexer *self);
+
+// Match a floating-point literal suffix -- f/F or l/L.
+bool match_float_suffix(struct lxl_lexer *self);
 
 // Match a punct token completely.
 bool match_punct(struct lxl_lexer *self);
