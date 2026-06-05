@@ -657,11 +657,42 @@ bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b);
 // NOTE: this is an implementation function; the wrapper macro above should be used instead.
 bool lxl_sv_eq_strings_impl(struct lxl_string_view sv, ...);
 
-// Return true is a string view is equal to any of a NULL-terminated list of C strings
+// Return true if a string view is equal to any of a NULL-terminated list of C strings
 // passed as a va_list.
 // NOTE: this is useful if you want to forward to `lxl_sv_eq_strings()` from within a
 //       variadic function. Otherwise, you should probably just use said macro.
 bool lxl_sv_eq_strings_impl_vargs(struct lxl_string_view sv, va_list vargs);
+
+// Return true if a string view starts with the given prefix.
+bool lxl_sv_has_prefix(struct lxl_string_view sv, struct lxl_string_view prefix);
+
+// Return true if a string view starts with any one of a list of C-strings.
+#define lxl_sv_has_prefix_strings(...)      \
+    lxl_sv_has_prefix_strings_impl(__VA_ARGS__, NULL)
+
+// Return true if a string view starts with any one of a NULL-terminated list of C strings
+// passed in variadic parameters.
+bool lxl_sv_has_prefix_strings_impl(struct lxl_string_view sv, ...);
+
+// Return true if a string view starts with any one of a NULL-terminated list of C strings
+// passed as a va_list.
+bool lxl_sv_has_prefix_strings_impl_vargs(struct lxl_string_view sv, va_list vargs);
+
+// Return true if a string view ends with the given suffix.
+bool lxl_sv_has_suffix(struct lxl_string_view sv, struct lxl_string_view suffix);
+
+// Return true if a string view ends with any one of a list of C-strings.
+#define lxl_sv_has_suffix_strings(...)      \
+    lxl_sv_has_suffix_strings_impl(__VA_ARGS__, NULL)
+
+// Return true if a string view ends with any one of a NULL-terminated list of C strings
+// passed in variadic parameters.
+bool lxl_sv_has_suffix_strings_impl(struct lxl_string_view sv, ...);
+
+// Return true if a string view ends with any one of a NULL-terminated list of C strings
+// passed as a va_list.
+bool lxl_sv_has_suffix_strings_impl_vargs(struct lxl_string_view sv, va_list vargs);
+
 
 // END STRING VIEW INTERFACE.
 

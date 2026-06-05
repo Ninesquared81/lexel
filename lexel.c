@@ -795,6 +795,49 @@ bool lxl_sv_eq_strings_impl_vargs(struct lxl_string_view sv, va_list vargs) {
     return false;
 }
 
+bool lxl_sv_has_prefix(struct lxl_string_view sv, struct lxl_string_view prefix) {
+    return lxl_sv_eq(lxl_sv_slice_start(sv, prefix.length), prefix);
+}
+
+bool lxl_sv_has_prefix_strings_impl(struct lxl_string_view sv, ...) {
+    va_list vargs;
+    va_start(vargs, sv);
+    bool success = lxl_sv_has_prefix_strings_impl_vargs(sv, vargs);
+    va_end(vargs);
+    return success;
+}
+
+bool lxl_sv_has_prefix_strings_impl_vargs(struct lxl_string_view sv, va_list vargs) {
+    const char *string = NULL;
+    while ((string = va_arg(vargs, const char *))) {
+        struct lxl_string_view prefix = lxl_sv_from_string(string);
+        if (lxl_sv_has_prefix(sv, prefix)) return true;
+    }
+    return false;
+}
+
+bool lxl_sv_has_suffix(struct lxl_string_view sv, struct lxl_string_view suffix) {
+    return lxl_sv_eq(lxl_sv_slice_end(sv, sv.length - suffix.length), suffix);
+}
+
+bool lxl_sv_has_suffix_strings_impl(struct lxl_string_view sv, ...) {
+    va_list vargs;
+    va_start(vargs, sv);
+    bool success = lxl_sv_has_suffix_strings_impl_vargs(sv, vargs);
+    va_end(vargs);
+    return success;
+}
+
+bool lxl_sv_has_suffix_strings_impl_vargs(struct lxl_string_view sv, va_list vargs) {
+    const char *string = NULL;
+    while ((string = va_arg(vargs, const char *))) {
+        struct lxl_string_view suffix = lxl_sv_from_string(string);
+        if (lxl_sv_has_suffix(sv, suffix)) return true;
+    }
+    return false;
+}
+
+
 // END STRING VIEW INTERFACE.
 
 
