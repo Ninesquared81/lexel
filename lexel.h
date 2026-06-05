@@ -636,13 +636,6 @@ const char *lxl_sv_end(const struct lxl_string_view *sv);
 // Fold a possibly negative index into the range 0 ..<= sv.length (aka the "nominal range").
 ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index);
 
-// Check if an index is in the nominal range, 0 ..<= sv.length, for a string view.
-// Note the inclusion of the index one past the end of the string view.
-bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t index);
-
-// Check is an index is in the proper range, 0 ..< sv.length, for a string view.
-// All elements inside the view fall in this range, with the position one past the end explicitly excluded.
-bool lxl_sv_index_in_proper_range(const struct lxl_string_view *sv, ptrdiff_t index);
 
 // Return a slice of the string view in the range from ..< to.
 struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to);

@@ -755,14 +755,6 @@ ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t ind
     return index;
 }
 
-bool lxl_sv_index_in_nominal_range(const struct lxl_string_view *sv, ptrdiff_t index) {
-    return 0 <= index && index <= sv->length;
-}
-
-bool lxl_sv_index_in_proper_range(const struct lxl_string_view *sv, ptrdiff_t index) {
-    return 0 <= index && index < sv->length;
-}
-
 struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to) {
     from = lxl_sv_normalise_index(sv, from);
     to = lxl_sv_normalise_index(sv, to);
