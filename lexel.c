@@ -149,12 +149,12 @@ void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
         /* Do nothing. */
     }
     if (lxl_lexer__match_float_radix_sep(self)) {
-        LXL_LEXER__CALL_HOOK(self, before_float_hook);
+        LXL_LEXER__CALL_HOOK(self, before_float_frac_hook);
         self->next_state = lxl_lstate_LexFloatPartFrac;
         return;
     }
     if (lxl_lexer__match_float_exp_sep(self)) {
-        LXL_LEXER__CALL_HOOK(self, before_float_hook);
+        LXL_LEXER__CALL_HOOK(self, before_float_exp_hook);
         self->next_state = lxl_lstate_LexFloatPartExp;
         return;
     }
@@ -171,16 +171,16 @@ void lxl_lstate_LexFloatStart(struct lxl_lexer *self) {
             self->next_state = lxl_lstate_LexPunctToken;
             return;
         }
-        LXL_LEXER__CALL_HOOK(self, before_float_hook);
         self->next_state = lxl_lstate_LexFloatPartFrac;
+        LXL_LEXER__CALL_HOOK(self, before_float_frac_hook);
         return;
     }
     if (!lxl_lexer__match_float_prefix(self)) {
         self->next_state = lxl_lstate_LexPunctToken;
         return;
     }
-    LXL_LEXER__CALL_HOOK(self, before_float_hook);
     self->next_state = lxl_lstate_LexFloatPartInt;
+    LXL_LEXER__CALL_HOOK(self, before_float_hook);
 }
 
 void lxl_lstate_LexFloatPartInt(struct lxl_lexer *self) {
@@ -189,10 +189,12 @@ void lxl_lstate_LexFloatPartInt(struct lxl_lexer *self) {
     }
     if (lxl_lexer__match_float_radix_sep(self)) {
         self->next_state = lxl_lstate_LexFloatPartFrac;
+        LXL_LEXER__CALL_HOOK(self, before_float_frac_hook);
         return;
     }
     if (lxl_lexer__match_float_exp_sep(self)) {
         self->next_state = lxl_lstate_LexFloatPartExp;
+        LXL_LEXER__CALL_HOOK(self, before_float_exp_hook);
         return;
     }
     self->next_state = lxl_lstate_LexFloatEnd;
@@ -204,6 +206,7 @@ void lxl_lstate_LexFloatPartFrac(struct lxl_lexer *self) {
     }
     if (lxl_lexer__match_float_exp_sep(self)) {
         self->next_state = lxl_lstate_LexFloatPartExp;
+        LXL_LEXER__CALL_HOOK(self, before_float_exp_hook);
         return;
     }
     self->next_state = lxl_lstate_LexFloatEnd;

@@ -249,6 +249,8 @@ struct lxl_lexer {
     void (*before_integer_hook)(struct lxl_lexer *self);    // Called before integer lexing.*
     void (*after_integer_hook)(struct lxl_lexer *self);     // Called after integer lexing.**
     void (*before_float_hook)(struct lxl_lexer *self);      // Called before floating point lexing.*
+    void (*before_float_frac_hook)(struct lxl_lexer *self); // Called before lexing float fractional part.
+    void (*before_float_exp_hook)(struct lxl_lexer *self);  // Called before lexing float exponent.
     void (*after_float_hook)(struct lxl_lexer *self);       // Called after floating point lexing.**
     void (*on_error_hook)(struct lxl_lexer *self);          // Called as soon as an error occurs.
     void (*before_error_token_hook)(struct lxl_lexer *self);// Called before an error token is finalised.
