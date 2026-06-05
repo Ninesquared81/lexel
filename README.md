@@ -38,12 +38,20 @@ struct lxl_lexer {
     const char *line_start;
     enum lxl_lex_error error;
     int line;
-    struct lxl_string_view last_string_opener;
+    union {
+        struct lxl_string_view last_string_opener;
+        struct lxl_string_view last_block_comment_opener;
+    };
+    int block_comment_level;
     void (*next_state)(struct lxl_lexer *self);
 
     // Query functions.
     bool (*match_whitespace_char)(struct lxl_lexer *self);
-    bool (*match_word_init_char)(struct lxl_lexer *self);
+    bool (*match_comment_line_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_closer)(struct lxl_lexer *self);
+    bool (*match_comment_block_nest_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_nest_closer)(struct lxl_lexer *self);
     bool (*match_word_char)(struct lxl_lexer *self);
     bool (*match_int_prefix)(struct lxl_lexer *self);
     bool (*match_int_digit)(struct lxl_lexer *self);
