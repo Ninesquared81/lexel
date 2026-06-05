@@ -183,4 +183,9 @@ void before_float_exp_hook(struct lxl_lexer *self);
 // Verify that the lexed float token has a valid suffix.
 void after_float_hook_verify_suffix(struct lxl_lexer *self);
 
+// Like isdigit() but also handles `'`.
+int is_c_digit_dec(int ch);
+// Like isxdigit() but also handles `'`.
+int is_c_digit_hex(int ch);
+
 #endif

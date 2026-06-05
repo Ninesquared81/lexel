@@ -18,7 +18,7 @@ int main(void) {
             "    float x = 42.;\n"
             "    float y = x + .5f;\n"
             "    float z = 0x11.2fp0;\n"
-            "    float alpha = 3.1415f;\n"
+            "    float alpha = 3.14'15f;\n"
             ".\n"
             "    printf(\"Hello, World!\\n\");\n"
             "}\n"
@@ -418,10 +418,10 @@ void before_float_exp_hook(struct lxl_lexer *self) {
 
 void after_float_hook_verify_suffix(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
-    int (*digit_pred)(int ch) = isdigit;
+    int (*digit_pred)(int ch) = is_c_digit_dec;
     if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
         token_sv = lxl_sv_slice_end(token_sv, -2);
-        digit_pred = isxdigit;
+        digit_pred = is_c_digit_hex;
     }
     else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {
         lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
@@ -432,7 +432,7 @@ void after_float_hook_verify_suffix(struct lxl_lexer *self) {
         token_sv = lxl_sv_slice_end(token_sv, 1);
         token_sv = lxl_sv_remove_predicate_left(token_sv, digit_pred);
     }
-    if (digit_pred == isxdigit) {
+    if (digit_pred == is_c_digit_hex) {
         if (!lxl_sv_has_prefix_strings(token_sv, "p", "P")) {
             lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
             return;
@@ -442,10 +442,18 @@ void after_float_hook_verify_suffix(struct lxl_lexer *self) {
     else if (lxl_sv_has_prefix_strings(token_sv, "e", "E")) {
         token_sv = lxl_sv_slice_end(token_sv, 1);
     }
-    token_sv = lxl_sv_remove_predicate_left(token_sv, isdigit); // NOTE: exponent is always decimal.
+    token_sv = lxl_sv_remove_predicate_left(token_sv, is_c_digit_dec); // NOTE: exponent is always decimal.
     if (lxl_sv_is_empty(token_sv)) return;  // OK.
     if (lxl_sv_eq_strings(token_sv, "f", "F", "l", "L")) return;  // OK.
     // Invalid suffix.
     lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
     self->next_state = lxl_lstate_Return;
+}
+
+int is_c_digit_dec(int ch) {
+    return isdigit(ch) || ch == '\'';
+}
+
+int is_c_digit_hex(int ch) {
+    return isxdigit(ch) || ch == '\'';
 }
