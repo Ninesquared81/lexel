@@ -45,7 +45,10 @@ void lxl_lstate_SkipWhitespace(struct lxl_lexer *self) {
         self->next_state = lxl_lstate_SkipLineComment;
         return;
     }
+    const char *opener_start = lxl_lexer__peek(self);
     if (lxl_lexer__match_comment_block_opener(self)) {
+        const char *opener_end = lxl_lexer__peek(self);
+        self->last_block_comment_opener = lxl_sv_from_startend(opener_start, opener_end);
         self->next_state = lxl_lstate_SkipBlockComment;
         return;
     }

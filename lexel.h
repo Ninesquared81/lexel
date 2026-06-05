@@ -184,7 +184,10 @@ struct lxl_lexer {
     const char *line_start;                 // Pointer to the beginning of the current line.
     enum lxl_lex_error error;               // Error code set to the current lexing error.
     int line;                               // The current line number.
-    struct lxl_string_view last_string_opener;  // String view of the last string-like opener.
+    union {
+        struct lxl_string_view last_string_opener;  // The last string-like opener.
+        struct lxl_string_view last_block_comment_opener;  // The last block comment opener.
+    };
     void (*next_state)(struct lxl_lexer *self);  // Pointer to the next state function of the lexer.
 
     // Query functions.
