@@ -225,6 +225,8 @@ void lxl_lstate_LexStringContents(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self) {
+    // Skip a single character.
+    lxl_lexer__advance(self);
     self->next_state = lxl_lstate_Return;
     lxl_lexer__error(self, LXL_LERR_UNRECOGNISED_TOKEN);
 }
