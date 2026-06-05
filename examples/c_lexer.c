@@ -11,7 +11,7 @@ int main(void) {
             "\n"
             "/* This was a triumph.\n"
             " * I'm making a note here\n"
-            " * HUGE SUCCESS! /**/ @ \n"
+            " * HUGE SUCCESS! \n"
             " */\n"
             "int main(void) {\n"
             "    assert(1 + 1 == 2);\n"
