@@ -138,9 +138,13 @@ void show_token(struct lxl_token token);
 
 // Match a C block comment opener -- /*.
 bool match_comment_block_opener(struct lxl_lexer *self);
-
 // Match a C block comment closer: -- */.
 bool match_comment_block_closer(struct lxl_lexer *self);
+
+// Match a nestable block comment opener -- /+.
+bool match_comment_block_nest_opener(struct lxl_lexer *self);
+// Match a nestable block comment closer -- +/.
+bool match_comment_block_nest_closer(struct lxl_lexer *self);
 
 // Match an initial word-constituent character for C tokens -- [A-Za-z_].
 bool match_word_init_char(struct lxl_lexer *self);
