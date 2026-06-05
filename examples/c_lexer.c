@@ -47,6 +47,9 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_float_kind = get_float_kind;
     lexer.get_punct_kind = get_punct_kind;
     lexer.get_string_kind = get_string_kind;
+    // Hook functions.
+    lexer.after_integer_hook = after_integer_hook_verify_suffix;
+    lexer.after_float_hook = after_float_hook_verify_suffix;
 
     return lexer;
 }
@@ -151,29 +154,19 @@ bool match_int_prefix(struct lxl_lexer *self) {
 }
 
 bool match_int_suffix(struct lxl_lexer *self) {
-    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("uU"))) {
-        (void)(lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))
-               || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("ll"))
-               || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("LL")));
-        return true;
+    if (!lxl_lexer__match_word_char(self)) return false;
+    while (lxl_lexer__match_word_char(self)) {
+        /* Do nothing. */
     }
-    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("ll"))
-        || lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("LL"))
-        || lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))) {
-        lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("uU"));
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool match_float_suffix(struct lxl_lexer *self) {
-    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("fF"))) {
-        return true;
+    if (!lxl_lexer__match_word_char(self)) return false;
+    while (lxl_lexer__match_word_char(self)) {
+        /* Do nothing. */
     }
-    if (lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("lL"))) {
-        return true;
-    }
-    return false;
+    return true;
 }
 
 bool match_punct(struct lxl_lexer *self) {
@@ -370,4 +363,61 @@ int get_string_kind(struct lxl_lexer *self) {
     if (opener == '\'') return CTOK_LIT_CHAR;
     LXL_UNREACHABLE();
     return LXL_LERR_GENERIC;
+}
+
+void after_integer_hook_verify_suffix(struct lxl_lexer *self) {
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    int (*digit_pred)(int ch) = isdigit;
+    if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
+        token_sv = lxl_sv_slice_start(token_sv, 2);
+        digit_pred = isxdigit;
+    }
+    else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {
+        token_sv = lxl_sv_slice_start(token_sv, 2);
+    }
+    token_sv = lxl_sv_remove_predicate_left(token_sv, digit_pred);
+    if (lxl_sv_has_prefix_strings(token_sv, "u", "U")) {
+        token_sv = lxl_sv_slice_end(token_sv, 1);
+    }
+    else if (lxl_sv_has_suffix_strings(token_sv, "u", "U")) {
+        token_sv = lxl_sv_slice_start(token_sv, -1);
+    }
+    if (lxl_sv_is_empty(token_sv)) return;
+    if (lxl_sv_eq_strings(token_sv, "l", "L", "ll", "LL")) return;
+    lxl_lexer__error(self, LXL_LERR_INVALID_INTEGER);
+    self->next_state = lxl_lstate_Return;
+}
+
+void after_float_hook_verify_suffix(struct lxl_lexer *self) {
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    int (*digit_pred)(int ch) = isdigit;
+    if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
+        token_sv = lxl_sv_slice_start(token_sv, 2);
+        digit_pred = isxdigit;
+    }
+    else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {
+        lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
+        return;
+    }
+    token_sv = lxl_sv_remove_predicate_left(token_sv, digit_pred);
+    if (lxl_sv_has_prefix_strings(token_sv, ".")) {
+        token_sv = lxl_sv_slice_end(token_sv, 1);
+        token_sv = lxl_sv_remove_predicate_left(token_sv, digit_pred);
+    }
+    if (digit_pred == isxdigit) {
+        if (!lxl_sv_has_prefix_strings(token_sv, "p", "P")) {
+            lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
+            return;
+        }
+        token_sv = lxl_sv_slice_end(token_sv, 1);
+    }
+    else if (lxl_sv_has_prefix_strings(token_sv, "e", "E")) {
+        token_sv = lxl_sv_slice_end(token_sv, 1);
+    }
+    token_sv = lxl_sv_remove_predicate_left(token_sv, isdigit); // NOTE: exponent is always decimal.
+    if (lxl_sv_is_empty(token_sv)) return;  // OK.
+    if (lxl_sv_eq_strings(token_sv, "f", "F", "l", "L")) return;  // OK.
+    // Invalid suffix.
+    lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
+    self->next_state = lxl_lstate_Return;
 }
