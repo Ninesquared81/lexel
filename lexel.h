@@ -624,7 +624,7 @@ struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length)
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end);
 
 // Get a pointer to one past the end of a string view.
-const char *lxl_sv_end(const struct lxl_string_view *sv);
+const char *lxl_sv_end(struct lxl_string_view sv);
 
 // String view format specifier for use with printf style formatting.
 // Use together with LXL_SV_FMT_ARG to unpack the argument.
@@ -634,17 +634,16 @@ const char *lxl_sv_end(const struct lxl_string_view *sv);
 #define LXL_SV_FMT_ARG(SV) (((SV).length < INT_MAX) ? (int)(SV).length : INT_MAX), (SV).start
 
 // Fold a possibly negative index into the range 0 ..<= sv.length (aka the "nominal range").
-ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index);
-
+ptrdiff_t lxl_sv_normalise_index(struct lxl_string_view sv, ptrdiff_t index);
 
 // Return a slice of the string view in the range from ..< to.
-struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to);
+struct lxl_string_view lxl_sv_slice(struct lxl_string_view sv, ptrdiff_t from, ptrdiff_t to);
 
 // Return a slice from the given index up to the end of a string view (from ..< sv.length).
-struct lxl_string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from);
+struct lxl_string_view lxl_sv_slice_end(struct lxl_string_view sv, ptrdiff_t from);
 
 // Return a slice from the start of a string view up to the given index (0 ..< to).
-struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrdiff_t to);
+struct lxl_string_view lxl_sv_slice_start(struct lxl_string_view sv, ptrdiff_t to);
 
 // Return true if two string views are equal, or false if they differ.
 bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b);

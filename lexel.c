@@ -744,31 +744,31 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) 
     };
 }
 
-const char *lxl_sv_end(const struct lxl_string_view *sv) {
-    return &sv->start[sv->length];
+const char *lxl_sv_end(struct lxl_string_view sv) {
+    return &sv.start[sv.length];
 }
 
-ptrdiff_t lxl_sv_normalise_index(const struct lxl_string_view *sv, ptrdiff_t index) {
-    if (index < 0) index += sv->length;
+ptrdiff_t lxl_sv_normalise_index(struct lxl_string_view sv, ptrdiff_t index) {
+    if (index < 0) index += sv.length;
     if (index < 0) index = 0;
-    if (index > sv->length) index = sv->length;
+    if (index > sv.length) index = sv.length;
     return index;
 }
 
-struct lxl_string_view lxl_sv_slice(const struct lxl_string_view *sv, ptrdiff_t from, ptrdiff_t to) {
+struct lxl_string_view lxl_sv_slice(struct lxl_string_view sv, ptrdiff_t from, ptrdiff_t to_ex) {
     from = lxl_sv_normalise_index(sv, from);
-    to = lxl_sv_normalise_index(sv, to);
-    ptrdiff_t length = to - from;
+    to_ex = lxl_sv_normalise_index(sv, to_ex);
+    ptrdiff_t length = to_ex - from;
     if (length < 0) length = 0;
-    return lxl_sv_from_startlen(&sv->start[from], length);
+    return lxl_sv_from_startlen(&sv.start[from], length);
 }
 
-struct lxl_string_view lxl_sv_slice_end(const struct lxl_string_view *sv, ptrdiff_t from) {
-    return lxl_sv_slice(sv, from, sv->length);
+struct lxl_string_view lxl_sv_slice_end(struct lxl_string_view sv, ptrdiff_t from) {
+    return lxl_sv_slice(sv, from, sv.length);
 }
 
-struct lxl_string_view lxl_sv_slice_start(const struct lxl_string_view *sv, ptrdiff_t to) {
-    return lxl_sv_slice(sv, 0, to);
+struct lxl_string_view lxl_sv_slice_start(struct lxl_string_view sv, ptrdiff_t to_ex) {
+    return lxl_sv_slice(sv, 0, to_ex);
 }
 
 bool lxl_sv_eq(struct lxl_string_view a, struct lxl_string_view b) {
@@ -806,7 +806,7 @@ const char *lxl_utf8_stream_position(const struct lxl_utf8_stream *stream) {
 
 struct lxl_string_view lxl_utf8_stream_tail(const struct lxl_utf8_stream *stream) {
     LXL_ASSERT(0 <= stream->cursor && stream->cursor <= stream->buffer.length);
-    return lxl_sv_slice_end(&stream->buffer, stream->cursor);
+    return lxl_sv_slice_end(stream->buffer, stream->cursor);
 }
 
 bool lxl_utf8_stream_is_finished(const struct lxl_utf8_stream *stream) {
