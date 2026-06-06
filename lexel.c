@@ -138,10 +138,12 @@ void lxl_lstate_LexWordToken(struct lxl_lexer *self) {
         self->next_state = lxl_lstate_LexIntToken;
         return;
     }
+    LXL_LEXER__CALL_HOOK(self, before_word_hook);
     while (lxl_lexer__match_word_char(self)) {
         /* Do nothing. */
     }
     self->next_state = lxl_lstate_EmitWordToken;
+    LXL_LEXER__CALL_HOOK(self, after_word_hook);
 }
 
 void lxl_lstate_LexIntToken(struct lxl_lexer *self) {
@@ -232,10 +234,12 @@ void lxl_lstate_LexFloatEnd(struct lxl_lexer *self) {
 }
 
 void lxl_lstate_LexPunctToken(struct lxl_lexer *self) {
-    bool success = lxl_lexer__match_punct(self);
-    self->next_state = (success)
-        ? lxl_lstate_EmitPunctToken
-        : lxl_lstate_LexStringStart;
+    if (!lxl_lexer__match_punct(self)) {
+        self->next_state = lxl_lstate_LexStringStart;
+        return;
+    }
+    self->next_state = lxl_lstate_EmitPunctToken;
+    LXL_LEXER__CALL_HOOK(self, after_punct_hook);
 }
 
 void lxl_lstate_LexStringStart(struct lxl_lexer *self) {
@@ -244,6 +248,7 @@ void lxl_lstate_LexStringStart(struct lxl_lexer *self) {
         self->next_state = lxl_lstate_UnrecognisedToken;
         return;
     }
+    LXL_LEXER__CALL_HOOK(self, before_string_hook);
     const char *opener_end = lxl_lexer__peek(self);
     LXL_ASSERT(opener_end > opener_start);
     self->last_string_opener = lxl_sv_from_startend(opener_start, opener_end);
@@ -262,6 +267,7 @@ void lxl_lstate_LexStringContents(struct lxl_lexer *self) {
         }
     }
     self->next_state = lxl_lstate_EmitStringToken;
+    LXL_LEXER__CALL_HOOK(self, after_string_hook);
 }
 
 void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self) {
