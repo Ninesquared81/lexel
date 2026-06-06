@@ -79,12 +79,17 @@ struct lxl_lexer {
     void (*before_token_hook)(struct lxl_lexer *self);
     void (*on_linefeed_hook)(struct lxl_lexer *self);
     void (*after_whitespace_hook)(struct lxl_lexer *self);
+    void (*before_word_hook)(struct lxl_lexer *self);
+    void (*after_word_hook)(struct lxl_lexer *self);
     void (*before_integer_hook)(struct lxl_lexer *self);
     void (*after_integer_hook)(struct lxl_lexer *self);
     void (*before_float_hook)(struct lxl_lexer *self);
     void (*before_float_frac_hook)(struct lxl_lexer *self);
     void (*before_float_exp_hook)(struct lxl_lexer *self);
     void (*after_float_hook)(struct lxl_lexer *self);
+    void (*after_punct_hook)(struct lxl_lexer *self);
+    void (*before_string_hook)(struct lxl_lexer *self);
+    void (*after_string_hook)(struct lxl_lexer *self);
     void (*on_error_hook)(struct lxl_lexer *self);
     void (*before_error_token_hook)(struct lxl_lexer *self);
     void (*after_token_hook)(struct lxl_lexer *self);
