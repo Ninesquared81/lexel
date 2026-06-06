@@ -22,6 +22,7 @@ int main(void) {
             ".\n"
             "    printf(\"Hello, World!\\n\");\n"
             "}\n"
+            "/*\n"
             );
     struct lxl_lexer lexer = create_c_lexer(src);
     for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(&lexer));) {
