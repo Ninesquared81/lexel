@@ -274,9 +274,7 @@ struct lxl_lexer {
 enum lxl__token_mvs {
     LXL_TOKENS_END = -1,           // Special token kind signifying the end of the token stream.
     LXL_TOKEN_UNINIT = -2,         // Special token kind for a token whose kind is yet to be determined.
-    // LXL_TOKENS_END_ABNORMAL = -3,  // Special token kind signifying an abnormal end of the token stream.
     LXL_TOKEN_LINE_ENDING = -4,    // Special token kind signifying the end of a line.
-    LXL_TOKEN_NO_TOKEN = -5,       // Special token kind for a non-existant token.
     // See enum lxl_lex_error for token error kinds.
 };
 
