@@ -65,7 +65,7 @@ struct lxl_string_view c_token_kind_name(int kind) {
         if (kind < LXL_LERR_GENERIC) {
             return lxl_error_message(kind);
         }
-        switch ((enum lxl__token_mvs)kind) {
+        switch ((enum lxl_token_mvs)kind) {
         case LXL_TOKENS_END: return LXL_SV_FROM_STRLIT("End of tokens");
         case LXL_TOKEN_UNINIT: return LXL_SV_FROM_STRLIT("Unitialised token");
         default: return LXL_SV_FROM_STRLIT("???");

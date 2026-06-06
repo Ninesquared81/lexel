@@ -271,7 +271,7 @@ struct lxl_lexer {
 
 // These enums define human-friendly names for the various magic values used by lexel.
 
-enum lxl__token_mvs {
+enum lxl_token_mvs {
     LXL_TOKENS_END = -1,           // Special token kind signifying the end of the token stream.
     LXL_TOKEN_UNINIT = -2,         // Special token kind for a token whose kind is yet to be determined.
     LXL_TOKEN_LINE_ENDING = -4,    // Special token kind signifying the end of a line.
