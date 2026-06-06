@@ -61,16 +61,6 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
 }
 
 struct lxl_string_view c_token_kind_name(int kind) {
-    if (kind < 0) {
-        if (kind < LXL_LERR_GENERIC) {
-            return lxl_error_message(kind);
-        }
-        switch ((enum lxl_token_mvs)kind) {
-        case LXL_TOKENS_END: return LXL_SV_FROM_STRLIT("End of tokens");
-        case LXL_TOKEN_UNINIT: return LXL_SV_FROM_STRLIT("Unitialised token");
-        default: return LXL_SV_FROM_STRLIT("???");
-        }
-    }
     static struct lxl_string_view names[] = {
         C_TOKENS(C_TOKENS_STRING_TABLE)
     };
@@ -97,7 +87,11 @@ const char *escape_char(char ch) {
 }
 
 void show_token(struct lxl_token token) {
-    struct lxl_string_view kind_sv = c_token_kind_name(token.kind);
+    if (lxl_token_is_error(token)) {
+        struct lxl_string_view msg = lxl_error_message(token.kind);
+        printf("Error: %"LXL_SV_FMT_SPC".\n", LXL_SV_FMT_ARG(msg));
+    }
+    struct lxl_string_view kind_sv = lxl_token_kind_name(token, c_token_kind_name);
     printf("%-32"LXL_SV_FMT_SPC"", LXL_SV_FMT_ARG(kind_sv));
     for (const char *p = token.start; p < token.end; ++p) {
         const char *esc = escape_char(*p);
