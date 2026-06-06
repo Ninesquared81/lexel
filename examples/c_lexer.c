@@ -48,6 +48,7 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.match_float_digit = match_digit_dec;
     lexer.match_float_suffix = match_float_suffix;
     lexer.match_punct = match_punct;
+    lexer.match_string_char = match_string_char;
     // Token kind getters.
     lexer.get_word_kind = get_word_kind;
     lexer.get_int_kind = get_int_kind;
@@ -258,6 +259,13 @@ bool match_punct(struct lxl_lexer *self) {
     }  // switch (ch).
     lxl_lexer__rewind(self);  // ch.
     return false;
+}
+
+bool match_string_char(struct lxl_lexer *self) {
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("\\"))) {
+        return !!lxl_lexer__advance(self);
+    }
+    return lxl_lexer__match_string_char_default(self);
 }
 
 int get_word_kind(struct lxl_lexer *self) {

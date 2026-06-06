@@ -171,6 +171,9 @@ bool match_float_suffix(struct lxl_lexer *self);
 // Match a punct token completely.
 bool match_punct(struct lxl_lexer *self);
 
+// Match a character in a string.
+bool match_string_char(struct lxl_lexer *self);
+
 int get_word_kind(struct lxl_lexer *self);
 int get_int_kind(struct lxl_lexer *self);
 int get_float_kind(struct lxl_lexer *self);
