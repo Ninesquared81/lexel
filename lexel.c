@@ -713,6 +713,36 @@ struct lxl_string_view lxl_token_value(struct lxl_token token) {
     return lxl_sv_from_startend(token.start, token.end);
 }
 
+struct lxl_string_view lxl_token_kind_name(struct lxl_token token,
+                                           struct lxl_string_view (*user_kind_as_sv)(int kind)) {
+    int kind = token.kind;
+    if (kind >= 0) {
+        return (user_kind_as_sv != NULL) ? user_kind_as_sv(kind) : lxl_sv_empty();
+    }
+    if (!lxl_token_is_error(token)) {
+        switch ((enum lxl_token_mvs)kind) {
+        case LXL_TOKENS_END:        return LXL_SV_FROM_STRLIT("LXL_TOKENS_END");
+        case LXL_TOKEN_UNINIT:      return LXL_SV_FROM_STRLIT("LXL_TOKEN_UNINIT");
+        case LXL_TOKEN_LINE_ENDING: return LXL_SV_FROM_STRLIT("LXL_TOKEN_LINE_ENDING");
+        }
+    }
+    else {
+        switch ((enum lxl_lex_error)kind) {
+        case LXL_LERR_OK:                       return LXL_SV_FROM_STRLIT("LXL_LERR_OK");
+        case LXL_LERR_GENERIC:                  return LXL_SV_FROM_STRLIT("LXL_LERR_GENERIC");
+        case LXL_LERR_EOF:                      return LXL_SV_FROM_STRLIT("LXL_LERR_EOF");
+        case LXL_LERR_UNCLOSED_BLOCK_COMMENT:   return LXL_SV_FROM_STRLIT("LXL_LERR_UNCLOSED_BLOCK_COMMENT");
+        case LXL_LERR_UNCLOSED_STRING:          return LXL_SV_FROM_STRLIT("LXL_LERR_UNCLOSED_STRING");
+        case LXL_LERR_INVALID_INTEGER:          return LXL_SV_FROM_STRLIT("LXL_LERR_INVALID_INTEGER");
+        case LXL_LERR_INVALID_FLOAT:            return LXL_SV_FROM_STRLIT("LXL_LERR_INVALID_FLOAT");
+        case LXL_LERR_UNICODE:                  return LXL_SV_FROM_STRLIT("LXL_LERR_UNICODE");
+        case LXL_LERR_UNRECOGNISED_TOKEN:       return LXL_SV_FROM_STRLIT("LXL_LERR_UNRECOGNISED_TOKEN");
+        case LXL_LERR_INVALID_STRING_CHARACTER: return LXL_SV_FROM_STRLIT("LXL_LERR_INVALID_STRING_CHARACTER");
+        }
+    }
+    return lxl_sv_empty();
+}
+
 struct lxl_string_view lxl_error_message(enum lxl_lex_error error) {
     switch (error) {
     case LXL_LERR_OK:               return LXL_SV_FROM_STRLIT("No error");

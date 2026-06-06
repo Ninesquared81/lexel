@@ -598,6 +598,12 @@ bool lxl_token_is_error(struct lxl_token token);
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);
 
+// Return the kind of a token as a string_view.
+// The user may provide a function to determine the value returned for user-defined kinds (>= 0).
+// For unknown types, an empty string view is returned.
+struct lxl_string_view lxl_token_kind_name(struct lxl_token token,
+                                           struct lxl_string_view (*user_kind_as_sv)(int kind));
+
 // Return a textual representation of the error code.
 struct lxl_string_view lxl_error_message(enum lxl_lex_error error);
 
