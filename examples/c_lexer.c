@@ -44,6 +44,7 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.match_int_prefix = match_int_prefix;
     lexer.match_int_digit = match_digit_dec;
     lexer.match_int_suffix = match_int_suffix;
+    lexer.match_float_prefix = match_float_prefix;
     lexer.match_float_digit = match_digit_dec;
     lexer.match_float_suffix = match_float_suffix;
     lexer.match_punct = match_punct;
@@ -159,6 +160,12 @@ bool match_int_suffix(struct lxl_lexer *self) {
         /* Do nothing. */
     }
     return true;
+}
+
+bool match_float_prefix(struct lxl_lexer *self) {
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0x"))) return true;
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0X"))) return true;
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("0123456789"));
 }
 
 bool match_float_suffix(struct lxl_lexer *self) {

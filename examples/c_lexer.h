@@ -163,6 +163,8 @@ bool match_digit_hex(struct lxl_lexer *self);
 // Match an integer literal suffix -- u/U and either l/L or ll/LL in any order..
 bool match_int_suffix(struct lxl_lexer *self);
 
+// Match a floating-point literal prefix -- 0x: hexadecimal, (digit): decimal.
+bool match_float_prefix(struct lxl_lexer *self);
 // Match a floating-point literal suffix -- f/F or l/L.
 bool match_float_suffix(struct lxl_lexer *self);
 
