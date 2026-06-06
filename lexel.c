@@ -118,6 +118,11 @@ void lxl_lstate_SkipNestableBlockComment(struct lxl_lexer *self) {
 void lxl_lstate_UnclosedBlockComment(struct lxl_lexer *self) {
     self->next_state = lxl_lstate_Return;
     lxl_lexer__error(self, LXL_LERR_UNCLOSED_BLOCK_COMMENT);
+    // Treat the erroneous comment as a token.
+    struct lxl_string_view opener = self->last_block_comment_opener;
+    // NOTE: self->token.start will point to the start of the PREVIOUS token.
+    LXL_ASSERT(opener.start != NULL && (self->token.start == NULL || opener.start > self->token.start));
+    self->token.start = opener.start;
 }
 
 void lxl_lstate_BeginToken(struct lxl_lexer *self) {
