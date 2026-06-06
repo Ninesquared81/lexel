@@ -2,33 +2,62 @@
 #include "c_lexer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 int main(void) {
-    struct lxl_string_view src =
-        LXL_SV_FROM_STRLIT_INIT(
-            "int printf(const char *restrict, ...);\n"
-            "\n"
-            "/+ This was a triumph.\n"
-            " + I'm making a note here\n"
-            " + HUGE SUCCESS! /++/ @\n"
-            " +/\n"
-            "int main(void) {\n"
-            "    assert(1 + 1 == 2);\n"
-            "    float x = 42.;\n"
-            "    float y = x + .5f;\n"
-            "    float z = 0x11.2fp0;\n"
-            "    float alpha = 3.14'15f;\n"
-            ".\n"
-            "    printf(\"Hello, World!\\n\");\n"
-            "}\n"
-            "/*\n"
-            );
+    // struct lxl_string_view src =
+    //     LXL_SV_FROM_STRLIT_INIT(
+    //         "int printf(const char *restrict, ...);\n"
+    //         "\n"
+    //         "/+ This was a triumph.\n"
+    //         " + I'm making a note here\n"
+    //         " + HUGE SUCCESS! /++/ @\n"
+    //         " +/\n"
+    //         "int main(void) {\n"
+    //         "    assert(1 + 1 == 2);\n"
+    //         "    float x = 42.;\n"
+    //         "    float y = x + .5f;\n"
+    //         "    float z = 0x11.2fp0;\n"
+    //         "    float alpha = 3.14'15f;\n"
+    //         ".\n"
+    //         "    printf(\"Hello, World!\\n\");\n"
+    //         "}\n"
+    //         );
+    FILE *fp = fopen(__FILE__, "r");
+    if (!fp) return 1;
+    struct lxl_string_view src = read_entire_file(fp);
+    fclose(fp);
     struct lxl_lexer lexer = create_c_lexer(src);
+    int n_semis = 0;
     for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(&lexer));) {
-        show_token(token);
+        // show_token(token);
+        if (token.kind == CTOK_SEMICOLON) ++n_semis;
     }
+    printf("Number of semicolons: %d\n", n_semis);
     return 0;
+}
+
+struct lxl_string_view read_entire_file(FILE *fp) {
+#define BLOCK_SIZE 1024u
+    char *buf = NULL;
+    size_t bufsize = 0;
+    size_t length = 0;
+    for(;;) {
+        void *temp = realloc(buf, bufsize + BLOCK_SIZE);
+        if (!temp) {
+            free(buf);
+            return lxl_sv_empty();
+        }
+        buf = temp;
+        bufsize += BLOCK_SIZE;
+        length += fread(&buf[length], 1, BLOCK_SIZE, fp);
+        if (length < bufsize) break;
+        LXL_ASSERT(length == bufsize);
+    }
+    buf[length] = 0;
+    return lxl_sv_from_startlen(buf, length);
+#undef BLOCK_SIZE
 }
 
 struct lxl_lexer create_c_lexer(struct lxl_string_view src) {

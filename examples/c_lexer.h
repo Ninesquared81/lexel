@@ -1,6 +1,8 @@
 #ifndef LXL_EX_C_LEXER_H
 #define LXL_EX_C_LEXER_H
 
+#include <stdio.h>
+
 #define C_TOKENS_DECLARE(CTOK, ...)             \
     CTOK __VA_OPT__(= __VA_ARGS__),
 
@@ -123,6 +125,10 @@
 enum c_token_kind {
     C_TOKENS(C_TOKENS_DECLARE)
 };
+
+// Read an entire file into a string view.
+// Return an empty view on error.
+struct lxl_string_view read_entire_file(FILE *fp);
 
 // Create a lexer capable of lexing C code.
 struct lxl_lexer create_c_lexer(struct lxl_string_view src);
