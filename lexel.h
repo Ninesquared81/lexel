@@ -623,6 +623,9 @@ struct lxl_string_view lxl_sv_from_startlen(const char *start, ptrdiff_t length)
 // Get a string view from a start pointer and an end pointer (one past the end).
 struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end);
 
+// Get an empty string view with a NULL `.start` field.
+struct lxl_string_view lxl_sv_empty(void);
+
 // Get a pointer to one past the end of a string view.
 const char *lxl_sv_end(struct lxl_string_view sv);
 

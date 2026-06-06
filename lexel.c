@@ -747,6 +747,10 @@ struct lxl_string_view lxl_sv_from_startend(const char *start, const char *end) 
     };
 }
 
+struct lxl_string_view lxl_sv_empty(void) {
+    return (struct lxl_string_view) {0};
+}
+
 const char *lxl_sv_end(struct lxl_string_view sv) {
     return &sv.start[sv.length];
 }
