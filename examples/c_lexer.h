@@ -136,6 +136,8 @@ const char *escape_char(char ch);
 // Show a token.
 void show_token(struct lxl_token token);
 
+// Match a C line comment opener -- //.
+bool match_comment_line_opener(struct lxl_lexer *self);
 // Match a C block comment opener -- /*.
 bool match_comment_block_opener(struct lxl_lexer *self);
 // Match a C block comment closer: -- */.

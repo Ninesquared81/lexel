@@ -34,6 +34,7 @@ int main(void) {
 struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     struct lxl_lexer lexer = lxl_lexer_new(src);
     // Query functions.
+    lexer.match_comment_line_opener = match_comment_line_opener;
     lexer.match_comment_block_opener = match_comment_block_opener;
     lexer.match_comment_block_closer = match_comment_block_closer;
     lexer.match_comment_block_nest_opener = match_comment_block_nest_opener;
@@ -99,6 +100,10 @@ void show_token(struct lxl_token token) {
         printf("%s", esc);
     }
     printf("\n");
+}
+
+bool match_comment_line_opener(struct lxl_lexer *self) {
+    return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("//"));
 }
 
 bool match_comment_block_opener(struct lxl_lexer *self) {
