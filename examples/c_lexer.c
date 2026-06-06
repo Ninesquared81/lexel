@@ -54,6 +54,7 @@ struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
     lexer.get_punct_kind = get_punct_kind;
     lexer.get_string_kind = get_string_kind;
     // Hook functions.
+    lexer.before_integer_hook = before_integer_hook;
     lexer.after_integer_hook = after_integer_hook_verify_suffix;
     lexer.before_float_frac_hook = lexer.before_float_frac_hook;
     lexer.before_float_exp_hook = lexer.before_float_exp_hook;
@@ -137,26 +138,11 @@ bool match_word_char(struct lxl_lexer *self) {
 }
 
 bool match_int_prefix(struct lxl_lexer *self) {
-    lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
-    self->match_int_digit = match_digit_dec;
-    if (ch == '0') {
-        ch = lxl_lexer__advance(self);
-        if (toupper(ch) == 'X') {
-            // Hexadecimal.
-            self->match_int_digit = match_digit_hex;
-            return true;
-        }
-        if (toupper(ch) != 'B') {
-            // Binary.
-            return true;
-        }
-        // Octal.
-        lxl_lexer__rewind(self);
-        return true;
-    }
-    if ('1' <= ch && ch <= '9') return true;
-    lxl_lexer__rewind(self);
-    return false;
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0x"))) return true;
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0X"))) return true;
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0b"))) return true;
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("0B"))) return true;
+    return lxl_lexer__match_chars(self, LXL_SV_FROM_STRLIT("0123456789"));
 }
 
 bool match_digit_dec(struct lxl_lexer *self) {
@@ -377,6 +363,16 @@ int get_string_kind(struct lxl_lexer *self) {
     if (opener == '\'') return CTOK_LIT_CHAR;
     LXL_UNREACHABLE();
     return LXL_LERR_GENERIC;
+}
+
+void before_integer_hook(struct lxl_lexer *self) {
+    struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+    if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
+        self->match_int_digit = match_digit_hex;
+    }
+    else {
+        self->match_int_digit = match_digit_dec;
+    }
 }
 
 void after_integer_hook_verify_suffix(struct lxl_lexer *self) {

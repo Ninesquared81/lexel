@@ -175,6 +175,8 @@ int get_float_kind(struct lxl_lexer *self);
 int get_punct_kind(struct lxl_lexer *self);
 int get_string_kind(struct lxl_lexer *self);
 
+// Switch to the relevant `.match_int_digit()`.
+void before_integer_hook(struct lxl_lexer *self);
 // Verify that the lexed integer token has a valid suffix.
 void after_integer_hook_verify_suffix(struct lxl_lexer *self);
 
