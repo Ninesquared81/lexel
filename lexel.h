@@ -590,11 +590,10 @@ void lxl_lexer__on_linefeed_hook_builtin_emit_line_ending(struct lxl_lexer *self
 // These functions are for working with tokens.
 
 // Return whether `tok` is a special end-of-tokens token.
-#define LXL_TOKEN_IS_END(tok) \
-    ((tok).kind == LXL_TOKENS_END)
+bool lxl_token_is_end(struct lxl_token token);
 
-// Return whether `tok` is a special error token.
-#define LXL_TOKEN_IS_ERROR(tok) ((tok).kind <= LXL_LERR_GENERIC)
+// Return whether a token is a special error token.
+bool lxl_token_is_error(struct lxl_token token);
 
 // Return the token's value as a string view.
 struct lxl_string_view lxl_token_value(struct lxl_token token);

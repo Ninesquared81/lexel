@@ -24,7 +24,7 @@ int main(void) {
             "}\n"
             );
     struct lxl_lexer lexer = create_c_lexer(src);
-    for (struct lxl_token token; !LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer));) {
+    for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(&lexer));) {
         show_token(token);
     }
     return 0;

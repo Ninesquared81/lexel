@@ -701,6 +701,14 @@ void lxl_lexer__on_linefeed_hook_builtin_emit_line_ending(struct lxl_lexer *self
 
 // TOKEN INTERFACE.
 
+bool lxl_token_is_end(struct lxl_token token) {
+    return token.kind == LXL_TOKENS_END;
+}
+
+bool lxl_token_is_error(struct lxl_token token) {
+    return token.kind <= LXL_LERR_GENERIC;
+}
+
 struct lxl_string_view lxl_token_value(struct lxl_token token) {
     return lxl_sv_from_startend(token.start, token.end);
 }
