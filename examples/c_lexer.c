@@ -377,10 +377,10 @@ void before_integer_hook(struct lxl_lexer *self) {
 
 void after_integer_hook_verify_suffix(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
-    int (*digit_pred)(int ch) = isdigit;
+    int (*digit_pred)(int ch) = is_c_digit_dec;
     if (lxl_sv_has_prefix_strings(token_sv, "0x", "0X")) {
         token_sv = lxl_sv_slice_end(token_sv, -2);
-        digit_pred = isxdigit;
+        digit_pred = is_c_digit_hex;
     }
     else if (lxl_sv_has_prefix_strings(token_sv, "0b", "0B")) {
         token_sv = lxl_sv_slice_start(token_sv, 2);
