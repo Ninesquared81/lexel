@@ -34,7 +34,7 @@ int main(void) {
         // show_token(token);
         if (token.kind == CTOK_SEMICOLON) ++n_semis;
     }
-    printf("Number of semicolons: %d\n", n_semis);
+    fprintf(stderr, "Number of semicolons: %d\n", n_semis);
     return 0;
 }
 
