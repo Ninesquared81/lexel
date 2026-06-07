@@ -31,7 +31,7 @@ int main(void) {
     struct lxl_lexer lexer = create_c_lexer(src);
     int n_semis = 0;
     for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(&lexer));) {
-        // show_token(token);
+        show_token(token);
         if (token.kind == CTOK_SEMICOLON) ++n_semis;
     }
     fprintf(stderr, "Number of semicolons: %d\n", n_semis);
