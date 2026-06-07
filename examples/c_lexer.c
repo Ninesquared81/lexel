@@ -237,6 +237,15 @@ bool match_punct(struct lxl_lexer *self) {
             lxl_lexer__rewind(self);
         }
         return true;
+    case '#':
+    {
+        /* Either single- or double-character with itself. */
+        lxl_UnicodeCodepoint ch2 = lxl_lexer__advance(self);
+        if (ch2 != ch) {
+            lxl_lexer__rewind(self);
+        }
+        return true;
+    }
     case '&':
     case '+':
     case '|':
@@ -375,6 +384,7 @@ int get_punct_kind(struct lxl_lexer *self) {
         return token_sv.start[0];
     }
     if (lxl_sv_eq_strings(token_sv, "!="))  return CTOK_BANG_EQ;
+    if (lxl_sv_eq_strings(token_sv, "##"))  return CTOK_HASH_HASH;
     if (lxl_sv_eq_strings(token_sv, "%="))  return CTOK_PERCENT_EQ;
     if (lxl_sv_eq_strings(token_sv, "&&"))  return CTOK_AMPERSAND_AMPERSAND;
     if (lxl_sv_eq_strings(token_sv, "&="))  return CTOK_AMPERSAND_EQ;

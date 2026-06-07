@@ -25,6 +25,7 @@
     X(CTOK_BKT_SQUARE_RIGHT, ']')         /* Right square bracket */                            \
     /* Single-character operators (equal to their ASCII values). */                             \
     X(CTOK_BANG, '!')                     /* Logical not */                                     \
+    X(CTOK_HASH, '#')                     /* PP begin directive, PP stringise. */               \
     X(CTOK_PERCENT, '%')                  /* Remainder */                                       \
     X(CTOK_AMPERSAND, '&')                /* Address of, bitwise and */                         \
     X(CTOK_ASTERISK, '*')                 /* Dereference, multiply */                           \
@@ -45,6 +46,7 @@
     X(CTOK_TILDE, '~')                    /* Bitwise not */                                     \
     /* Multi-character operators. */                                                            \
     X(CTOK_BANG_EQ)                       /* !=  Not equal to */                                \
+    X(CTOK_HASH_HASH)                     /* ##  PP concatenate */                              \
     X(CTOK_PERCENT_EQ)                    /* %=  Assign by remainder */                         \
     X(CTOK_AMPERSAND_AMPERSAND)           /* &&  Logical and */                                 \
     X(CTOK_AMPERSAND_EQ)                  /* &=  Assign by bitwise and */                       \
