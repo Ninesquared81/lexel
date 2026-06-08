@@ -128,9 +128,13 @@ enum c_token_kind {
     C_TOKENS(C_TOKENS_DECLARE)
 };
 
-// Read an entire file into a string view.
-// Return an empty view on error.
-struct lxl_string_view read_entire_file(FILE *fp);
+// Read a C file into a string view, including splicing lines ending with `\`.
+// Return an empty view on failure.
+struct lxl_string_view read_file_logical_lines(FILE *fp);
+
+// Grow a buffer of the given (current) size, and return a copy of the newly allocated buffer.
+// Free *buf on failure and return NULL.
+void *grow_buffer(char **buf, size_t *size);
 
 // Create a lexer capable of lexing C code.
 struct lxl_lexer create_c_lexer(struct lxl_string_view src);

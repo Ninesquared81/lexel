@@ -26,7 +26,7 @@ int main(void) {
     //         );
     FILE *fp = fopen(__FILE__, "r");
     if (!fp) return 1;
-    struct lxl_string_view src = read_entire_file(fp);
+    struct lxl_string_view src = read_file_logical_lines(fp);
     fclose(fp);
     struct lxl_lexer lexer = create_c_lexer(src);
     int n_semis = 0;
@@ -38,26 +38,38 @@ int main(void) {
     return 0;
 }
 
-struct lxl_string_view read_entire_file(FILE *fp) {
-#define BLOCK_SIZE 1024u
-    char *buf = NULL;
-    size_t bufsize = 0;
+struct lxl_string_view read_file_logical_lines(FILE *fp) {
+    int ch = EOF;
+    size_t size = 1024;
     size_t length = 0;
-    for(;;) {
-        void *temp = realloc(buf, bufsize + BLOCK_SIZE);
-        if (!temp) {
-            free(buf);
-            return lxl_sv_empty();
+    char *buf = malloc(size);
+    while ((ch = fgetc(fp)) != EOF) {
+        LXL_ASSERT(length <= size);
+        if (length == size) {
+            if (!grow_buffer(&buf, &size)) return lxl_sv_empty();
+            LXL_ASSERT(size > length);
         }
-        buf = temp;
-        bufsize += BLOCK_SIZE;
-        length += fread(&buf[length], 1, BLOCK_SIZE, fp);
-        if (length < bufsize) break;
-        LXL_ASSERT(length == bufsize);
+        if (ch == '\\') {
+            int ch2 = fgetc(fp);
+            if (ch2 == '\n') continue;
+            ungetc(ch2, fp);
+        }
+        buf[length++] = ch;
     }
-    buf[length] = 0;
     return lxl_sv_from_startlen(buf, length);
-#undef BLOCK_SIZE
+}
+
+void *grow_buffer(char **buf, size_t *size) {
+    LXL_ASSERT(*size > 0);
+    *size += *size/2;
+    void *temp = realloc(*buf, *size);
+    if (!temp) {
+        free(*buf);
+        *size = 0;
+        return NULL;
+    }
+    *buf = temp;
+    return *buf;
 }
 
 struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
