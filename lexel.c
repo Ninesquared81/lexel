@@ -273,17 +273,17 @@ void lxl_lstate_LexStringContents(struct lxl_lexer *self) {
 void lxl_lstate_UnrecognisedToken(struct lxl_lexer *self) {
     // Skip a single character.
     lxl_lexer__advance(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
     lxl_lexer__error(self, LXL_LERR_UNRECOGNISED_TOKEN);
 }
 
 void lxl_lstate_UnclosedString(struct lxl_lexer *self) {
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
     lxl_lexer__error(self, LXL_LERR_UNCLOSED_STRING);
 }
 
 void lxl_lstate_InvalidStringCharacter(struct lxl_lexer *self) {
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
     lxl_lexer__error(self, LXL_LERR_INVALID_STRING_CHARACTER);
 }
 
@@ -291,7 +291,7 @@ void lxl_lstate_EmitEndToken(struct lxl_lexer *self) {
     LXL_ASSERT(lxl_lexer_is_finished(self));
     lxl_lexer__begin_token(self);
     self->token.kind = LXL_TOKENS_END;
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitLineEndingToken(struct lxl_lexer *self) {
@@ -299,41 +299,45 @@ void lxl_lstate_EmitLineEndingToken(struct lxl_lexer *self) {
     LXL_ASSERT(self->token.start > self->stream.buffer.start);
     self->token.start -= 1;
     self->token.kind = LXL_TOKEN_LINE_ENDING;
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitWordToken(struct lxl_lexer *self) {
     self->token.kind = lxl_lexer__get_word_kind(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitIntToken(struct lxl_lexer *self) {
     self->token.kind = lxl_lexer__get_int_kind(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitFloatToken(struct lxl_lexer *self) {
     self->token.kind = lxl_lexer__get_float_kind(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitPunctToken(struct lxl_lexer *self) {
     self->token.kind = lxl_lexer__get_punct_kind(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
 void lxl_lstate_EmitStringToken(struct lxl_lexer *self) {
     self->token.kind = lxl_lexer__get_string_kind(self);
-    self->next_state = lxl_lstate_Return;
+    self->next_state = lxl_lstate_FinishToken;
 }
 
-void lxl_lstate_Return(struct lxl_lexer *self) {
-    self->next_state = lxl_lstate_Ready;
+void lxl_lstate_FinishToken(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Return;
     if (self->error) {
         LXL_LEXER__CALL_HOOK(self, before_error_token_hook);
     }
     lxl_lexer__finish_token(self);
     LXL_LEXER__CALL_HOOK(self, after_token_hook);
+}
+
+void lxl_lstate_Return(struct lxl_lexer *self) {
+    self->next_state = lxl_lstate_Ready;
     self->error = LXL_LERR_OK;  // Clear error.
 }
 

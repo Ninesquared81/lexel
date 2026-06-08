@@ -259,11 +259,13 @@ struct lxl_lexer {
     void (*after_string_hook)(struct lxl_lexer *self);      // Called after string-like lexing.**
     void (*on_error_hook)(struct lxl_lexer *self);          // Called as soon as an error occurs.
     void (*before_error_token_hook)(struct lxl_lexer *self);// Called before an error token is finalised.
-    void (*after_token_hook)(struct lxl_lexer *self);       // Called just before token is returned.
+    void (*after_token_hook)(struct lxl_lexer *self);       // Called just before token is returned.***
     // Notes:
-    // *  these hooks are only called after the respective token kind has been determined/guessed.
-    // ** these hooks are called just before the respective lexing functions return to the caller,
-    //    meaning they can change the lexer's status for more advanced control.
+    // *   These hooks are only called after the respective token kind has been determined/guessed.
+    // **  These hooks are called just before the respective lexing functions return to the caller,
+    //     meaning they can change the lexer's status for more advanced control.
+    // *** This hook is called before the lexel exits its state machine event loop (by entering the
+    //     Return state). This means that this hook can be used to make the lexer continue lexing.
 
     // Extensions (not used by lexel directly).
     void *custom_info;  // Pointer to any additional user-defined data. Can be left NULL if unneeded.
@@ -414,6 +416,9 @@ void lxl_lstate_EmitPunctToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifying that the lexer should emit a string-like token.
 void lxl_lstate_EmitStringToken(struct lxl_lexer *self);
+
+// Standard lexer state function signifying that the lexer should finish its current token.
+void lxl_lstate_FinishToken(struct lxl_lexer *self);
 
 // Standard lexer state function signifiying that the lexer should return to the caller.
 void lxl_lstate_Return(struct lxl_lexer *self);
