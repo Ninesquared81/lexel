@@ -28,9 +28,11 @@ int main(void) {
     if (!fp) return 1;
     struct lxl_string_view src = read_file_logical_lines(fp);
     fclose(fp);
-    struct lxl_lexer lexer = create_c_lexer(src);
+    struct c_lexer c_lexer = {0};
+    init_c_lexer(&c_lexer, src);
+    struct lxl_lexer *lexer = &c_lexer.base;
     int n_semis = 0;
-    for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(&lexer));) {
+    for (struct lxl_token token; !lxl_token_is_end(token = lxl_lexer_next_token(lexer));) {
         show_token(token);
         if (token.kind == CTOK_SEMICOLON) ++n_semis;
     }
@@ -72,38 +74,41 @@ void *grow_buffer(char **buf, size_t *size) {
     return *buf;
 }
 
-struct lxl_lexer create_c_lexer(struct lxl_string_view src) {
-    struct lxl_lexer lexer = lxl_lexer_new(src);
-    // Query functions.
-    lexer.match_comment_line_opener = match_comment_line_opener;
-    lexer.match_comment_block_opener = match_comment_block_opener;
-    lexer.match_comment_block_closer = match_comment_block_closer;
-    lexer.match_comment_block_nest_opener = match_comment_block_nest_opener;
-    lexer.match_comment_block_nest_closer = match_comment_block_nest_closer;
-    lexer.match_word_init_char = match_word_init_char;
-    lexer.match_word_char = match_word_char;
-    lexer.match_int_prefix = match_int_prefix;
-    lexer.match_int_digit = match_digit_dec;
-    lexer.match_int_suffix = match_int_suffix;
-    lexer.match_float_prefix = match_float_prefix;
-    lexer.match_float_digit = match_digit_dec;
-    lexer.match_float_suffix = match_float_suffix;
-    lexer.match_punct = match_punct;
-    lexer.match_string_char = match_string_char;
-    // Token kind getters.
-    lexer.get_word_kind = get_word_kind;
-    lexer.get_int_kind = get_int_kind;
-    lexer.get_float_kind = get_float_kind;
-    lexer.get_punct_kind = get_punct_kind;
-    lexer.get_string_kind = get_string_kind;
-    // Hook functions.
-    lexer.before_integer_hook = before_integer_hook;
-    lexer.after_integer_hook = after_integer_hook_verify_suffix;
-    lexer.before_float_frac_hook = lexer.before_float_frac_hook;
-    lexer.before_float_exp_hook = lexer.before_float_exp_hook;
-    lexer.after_float_hook = after_float_hook_verify_suffix;
+void init_c_lexer(struct c_lexer *lexer, struct lxl_string_view src) {
+    // Lexer base.
+    lexer->base = lxl_lexer_new(src);
 
-    return lexer;
+    // Query functions.
+    lexer->base.match_comment_line_opener = match_comment_line_opener;
+    lexer->base.match_comment_block_opener = match_comment_block_opener;
+    lexer->base.match_comment_block_closer = match_comment_block_closer;
+    lexer->base.match_comment_block_nest_opener = match_comment_block_nest_opener;
+    lexer->base.match_comment_block_nest_closer = match_comment_block_nest_closer;
+    lexer->base.match_word_init_char = match_word_init_char;
+    lexer->base.match_word_char = match_word_char;
+    lexer->base.match_int_prefix = match_int_prefix;
+    lexer->base.match_int_digit = match_digit_dec;
+    lexer->base.match_int_suffix = match_int_suffix;
+    lexer->base.match_float_prefix = match_float_prefix;
+    lexer->base.match_float_digit = match_digit_dec;
+    lexer->base.match_float_suffix = match_float_suffix;
+    lexer->base.match_punct = match_punct;
+    lexer->base.match_string_char = match_string_char;
+    // Token kind getters.
+    lexer->base.get_word_kind = get_word_kind;
+    lexer->base.get_int_kind = get_int_kind;
+    lexer->base.get_float_kind = get_float_kind;
+    lexer->base.get_punct_kind = get_punct_kind;
+    lexer->base.get_string_kind = get_string_kind;
+    // Hook functions.
+    lexer->base.before_integer_hook = before_integer_hook;
+    lexer->base.after_integer_hook = after_integer_hook_verify_suffix;
+    lexer->base.before_float_frac_hook = before_float_frac_hook;
+    lexer->base.before_float_exp_hook = before_float_exp_hook;
+    lexer->base.after_float_hook = after_float_hook_verify_suffix;
+
+    // Preprocessor.
+    lexer->base.custom_info = &lexer->pp_info;
 }
 
 struct lxl_string_view c_token_kind_name(int kind) {

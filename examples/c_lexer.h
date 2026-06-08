@@ -128,6 +128,18 @@ enum c_token_kind {
     C_TOKENS(C_TOKENS_DECLARE)
 };
 
+// Preprocessor information.
+struct pp_info {
+    bool in_directive;
+    struct lxl_string_view directive;
+};
+
+// Wrapper struct for a C lexer.
+struct c_lexer {
+    struct lxl_lexer base;
+    struct pp_info pp_info;
+};
+
 // Read a C file into a string view, including splicing lines ending with `\`.
 // Return an empty view on failure.
 struct lxl_string_view read_file_logical_lines(FILE *fp);
@@ -137,7 +149,7 @@ struct lxl_string_view read_file_logical_lines(FILE *fp);
 void *grow_buffer(char **buf, size_t *size);
 
 // Create a lexer capable of lexing C code.
-struct lxl_lexer create_c_lexer(struct lxl_string_view src);
+void init_c_lexer(struct c_lexer *lexer, struct lxl_string_view src);
 
 // Return a string view of the name for the given C token kind.
 struct lxl_string_view c_token_kind_name(int kind);
