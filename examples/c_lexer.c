@@ -6,24 +6,6 @@
 #include <ctype.h>
 
 int main(void) {
-    // struct lxl_string_view src =
-    //     LXL_SV_FROM_STRLIT_INIT(
-    //         "int printf(const char *restrict, ...);\n"
-    //         "\n"
-    //         "/+ This was a triumph.\n"
-    //         " + I'm making a note here\n"
-    //         " + HUGE SUCCESS! /++/ @\n"
-    //         " +/\n"
-    //         "int main(void) {\n"
-    //         "    assert(1 + 1 == 2);\n"
-    //         "    float x = 42.;\n"
-    //         "    float y = x + .5f;\n"
-    //         "    float z = 0x11.2fp0;\n"
-    //         "    float alpha = 3.14'15f;\n"
-    //         ".\n"
-    //         "    printf(\"Hello, World!\\n\");\n"
-    //         "}\n"
-    //         );
     FILE *fp = fopen(__FILE__, "r");
     if (!fp) return 1;
     struct lxl_string_view src = read_file_logical_lines(fp);
