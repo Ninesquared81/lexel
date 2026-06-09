@@ -20,11 +20,15 @@ Just build lexel.c as part of your project. Lexel is designed to allow it to be
 built as part of a unity build, so you can even just `#include "lexel.c"` in the
 relevant file in your project.
 
+Of course, lexel _can_ be built as a traditional static/dynamic library and subsequently
+linked to, if you so desire.
+
 ## Library Overview
 
 Lexel is a library for creating lexers. Lexel does not "generate" lexer code for you, but
 instead runs a state machine which despatches to user-provided functions to recognise and
-lex tokens.
+lex tokens. It is designed to have a simple core which is easily extended, allowing for
+much flexibility in usage.
 
 ### The lexer
 
@@ -139,3 +143,106 @@ Finally, the last field in the lexer is `.custom_info`. This is a generic pointe
 used by the default lexer at all. It is provided in case a user requires additional
 context when extending the lexer. Its meaning is left completely up to he user and
 can be safely ignored if not required.
+
+### Built-in lexer extensions
+
+Lexel comes with a few handy built-in extensions covering some of the most common cases,
+allowing users to use the built-in version rather than implementing them.
+
+### Tokens
+
+The lexer spits out tokens via calls to `lxl_lexer_next_token()`. Lexel's tokens store
+pointers to the start and end of the token's contents, the token's source location
+(line and column number), and an integer storing the token's kind.
+
+```c
+struct lxl_token {
+    const char *start;
+    const char *end;
+    struct lxl_location loc;
+    int kind;
+};
+```
+
+The user is free to prescribe meanings to kind values of zero or greater, however,
+negative kind values are reserved for use by lexel and can have special meanings.
+
+For example, a kind of `-1` is used for the sentinel "end of tokens" token, while
+a kind of `-2` represents an uninitalised token. If the user does not specify a
+type for a token, it will have a value of `-2` (apart from the aforementioned
+"end of tokens" token). A value of `-16` or less represents a lexing error, with
+specific values for each error, listed below:
+
+```c
+enum lxl_lex_error {
+    LXL_LERR_OK = 0,
+    LXL_LERR_GENERIC = -16,
+    LXL_LERR_EOF = -17,
+    LXL_LERR_UNCLOSED_BLOCK_COMMENT = -18,
+    LXL_LERR_UNCLOSED_STRING = -19,
+    LXL_LERR_INVALID_INTEGER = -20,
+    LXL_LERR_INVALID_FLOAT = -21,
+    LXL_LERR_UNICODE = -22,
+    LXL_LERR_UNRECOGNISED_TOKEN = -23,
+    LXL_LERR_INVALID_STRING_CHARACTER = -24,
+};
+```
+
+A [string view](#string-view-interface) of a token's value can be obtained via the
+`lxl_token_value()` function. Note that during lexing, the `.end` field of the token
+will likely not be set yet (or rather, it will be set to the token's `.start`). When
+in the lexer, the function `lxl_lexer__peek_token()` should be used to obtain a
+string view of the current token as it stands up to the current position of the lexer.
+
+### String view interface
+
+Lexel comes with its own string view interface, which is used internally by the library
+to store strings. A string view is a read-only pointer to string data along with a
+byte length. Below is lexel's definition of a string view:
+
+```c
+struct lxl_string_view {
+    const char *start;
+    ptrdiff_t length;
+};
+```
+
+You will notice that the length field is signed. This is an intentional design choice
+for lexel since signed types generally behave more intuitively, even when they are
+representing something which cannot be negative.
+
+### UTF-8 stream interface
+
+Lexel also comes with an interface for working with UTF-8 data, which is used by the
+lexer. UTF-8 is the _only_ supported string encoding in lexel (apart from ASCII,
+which is a subset of UTF-8). To use data with a different encoding, it must first be
+re-encoded into UTF-8 before being fed into lexel.
+
+The stream decodes the UTF-8 data codepoint-by-codepoint, via calls to
+`lxl_utf8_stream_advance()`. The stream can also be rewound one codepoint
+at a time via `lxl_utf8_stream_rewind()`. Both of these take a pointer to
+a UTF-8 stream object, which is defined below:
+
+```c
+struct lxl_utf8_stream {
+    struct lxl_string_view buffer;
+    ptrdiff_t cursor;
+    enum lxl_unicode_error error;
+};
+```
+
+The last field is the latest Unicode decoding error, which is cleared/set when the stream
+is advanced or rewinded. The error can be one of:
+
+```c
+enum lxl_unicode_error {
+    LXL_UNIERR_OK = 0,
+    LXL_UNIERR_UNEXPECTED_EOF,
+    LXL_UNIERR_INVALID_FIRST_BYTE,
+    LXL_UNIERR_INVALID_CONT_BYTE,
+    LXL_UNIERR_UNEXPECTED_CONT_BYTE,
+    LXL_UNIERR_MISSING_CONT_BYTE,
+    LXL_UNIERR_OUT_OF_RANGE,
+    LXL_UNIERR_OVERLONG_ENCODING,
+};
+```
