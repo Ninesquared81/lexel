@@ -11,7 +11,7 @@ I am currently rewriting it from the ground up, so please bear with me.
 Lexel comes as a pair of .c and .h files. Only lexel.c and lexel.h are needed to use the library,
 although tests and examples are also available if you download the entire repo.
 
-Currently, there are no releases, so to install, either download the raw [lexel.c](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.c) and [lexel.h](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.h) files.
+Currently, there are no releases, so to install, either download the raw [lexel.c](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.c) and [lexel.h](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.h) files, or clone the entire repo.
 
 ## (Not) Building
 
