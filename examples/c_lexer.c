@@ -76,7 +76,9 @@ void init_c_lexer(struct c_lexer *lexer, struct lxl_string_view src) {
     lexer->base.match_float_digit = match_digit_dec;
     lexer->base.match_float_suffix = match_float_suffix;
     lexer->base.match_punct = match_punct;
+    lexer->base.match_string_opener = match_string_opener;
     lexer->base.match_string_char = match_string_char;
+    lexer->base.match_string_closer = match_string_closer;
     // Token kind getters.
     lexer->base.get_word_kind = get_word_kind;
     lexer->base.get_int_kind = get_int_kind;
@@ -84,14 +86,17 @@ void init_c_lexer(struct c_lexer *lexer, struct lxl_string_view src) {
     lexer->base.get_punct_kind = get_punct_kind;
     lexer->base.get_string_kind = get_string_kind;
     // Hook functions.
+    lexer->base.on_linefeed_hook = on_linefeed_hook_preprocessor;
     lexer->base.before_integer_hook = before_integer_hook;
     lexer->base.after_integer_hook = after_integer_hook_verify_suffix;
     lexer->base.before_float_frac_hook = before_float_frac_hook;
     lexer->base.before_float_exp_hook = before_float_exp_hook;
     lexer->base.after_float_hook = after_float_hook_verify_suffix;
+    lexer->base.after_token_hook = after_token_hook_preprocessor;
 
     // Preprocessor.
     lexer->base.custom_info = &lexer->pp_info;
+    lexer->pp_info.at_line_start = true;
 }
 
 struct lxl_string_view c_token_kind_name(int kind) {
@@ -213,6 +218,11 @@ bool match_punct(struct lxl_lexer *self) {
      * with the cases stacked for each category.
      */
     lxl_UnicodeCodepoint ch = lxl_lexer__advance(self);
+    struct pp_info *pp_info = self->custom_info;
+    if (pp_info->allow_header_string && ch == '<') {
+        lxl_lexer__rewind(self);
+        return false;
+    }
     switch (ch) {
     case '(': case ')':
     case '{': case '}':
@@ -299,15 +309,38 @@ bool match_punct(struct lxl_lexer *self) {
     return false;
 }
 
+bool match_string_opener(struct lxl_lexer *self) {
+    struct pp_info *pp_info = self->custom_info;
+    if (pp_info->allow_header_string && lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("<"))) {
+        return true;
+    }
+    return lxl_lexer__match_string_opener_default(self);
+}
+
 bool match_string_char(struct lxl_lexer *self) {
-    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("\\"))) {
+    if (lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT("\\"))
+        && !lxl_sv_eq_strings(self->last_string_opener, "<")) {
         return !!lxl_lexer__advance(self);
     }
     return lxl_lexer__match_string_char_default(self);
 }
 
+bool match_string_closer(struct lxl_lexer *self) {
+    if (lxl_sv_eq_strings(self->last_string_opener, "<")) {
+        return lxl_lexer__match_string(self, LXL_SV_FROM_STRLIT(">"));
+    }
+    return lxl_lexer__match_string_closer_default(self);
+}
+
 int get_word_kind(struct lxl_lexer *self) {
     struct lxl_string_view token_sv = lxl_lexer__peek_token(self);
+
+    struct pp_info *pp_info = self->custom_info;
+    if (pp_info->directive_state == PP_DIRECTIVE_EXPECT) {
+        if (is_pp_directive(token_sv)) return CTOK_PP_DIRECTIVE;
+        return CTOK_IDENTIFIER;
+    }
+
     if (lxl_sv_eq_strings(token_sv, "alignas", "_Alignas")) return CTOK_KW_ALIGNAS;
     if (lxl_sv_eq_strings(token_sv, "alignof", "_Alignof")) return CTOK_KW_ALIGNOF;
     if (lxl_sv_eq_strings(token_sv, "_Atomic")) return CTOK_KW_ATOMIC;
@@ -366,6 +399,27 @@ int get_word_kind(struct lxl_lexer *self) {
     return CTOK_IDENTIFIER;
 }
 
+bool is_pp_directive(struct lxl_string_view token_sv) {
+    if (lxl_sv_eq_strings(token_sv, "define")) return true;
+    if (lxl_sv_eq_strings(token_sv, "elif")) return true;
+    if (lxl_sv_eq_strings(token_sv, "elifdef")) return true;
+    if (lxl_sv_eq_strings(token_sv, "elifndef")) return true;
+    if (lxl_sv_eq_strings(token_sv, "else")) return true;
+    if (lxl_sv_eq_strings(token_sv, "embed")) return true;
+    if (lxl_sv_eq_strings(token_sv, "endif")) return true;
+    if (lxl_sv_eq_strings(token_sv, "error")) return true;
+    if (lxl_sv_eq_strings(token_sv, "if")) return true;
+    if (lxl_sv_eq_strings(token_sv, "ifdef")) return true;
+    if (lxl_sv_eq_strings(token_sv, "ifndef")) return true;
+    if (lxl_sv_eq_strings(token_sv, "include")) return true;
+    if (lxl_sv_eq_strings(token_sv, "line")) return true;
+    if (lxl_sv_eq_strings(token_sv, "pragma")) return true;
+    if (lxl_sv_eq_strings(token_sv, "undef")) return true;
+    if (lxl_sv_eq_strings(token_sv, "warning")) return true;
+
+    return false;
+}
+
 int get_int_kind(struct lxl_lexer *self) {
     (void)self;
     return CTOK_LIT_INT;
@@ -415,8 +469,16 @@ int get_string_kind(struct lxl_lexer *self) {
     char opener = token_sv.start[0];
     if (opener == '"') return CTOK_LIT_STRING;
     if (opener == '\'') return CTOK_LIT_CHAR;
+    if (opener == '<') return CTOK_LIT_HEADER_STRING;
     LXL_UNREACHABLE();
     return LXL_LERR_GENERIC;
+}
+
+void on_linefeed_hook_preprocessor(struct lxl_lexer *self) {
+    struct pp_info *pp_info = self->custom_info;
+    pp_info->directive_state = PP_DIRECTIVE_OUT;
+    pp_info->at_line_start = true;
+    pp_info->allow_header_string = false;
 }
 
 void before_integer_hook(struct lxl_lexer *self) {
@@ -498,6 +560,47 @@ void after_float_hook_verify_suffix(struct lxl_lexer *self) {
     // Invalid suffix.
     lxl_lexer__error(self, LXL_LERR_INVALID_FLOAT);
     self->next_state = lxl_lstate_Return;
+}
+
+void after_token_hook_preprocessor(struct lxl_lexer *self) {
+    if (self->token.kind == CTOK_HASH) {
+        pp_handle_hash(self);
+    }
+    else if (self->token.kind == CTOK_HASH_HASH) {
+        pp_handle_hash_hash(self);
+    }
+    else if (self->token.kind == CTOK_PP_DIRECTIVE) {
+        pp_handle_directive(self);
+    }
+    struct pp_info *pp_info = self->custom_info;
+    pp_info->at_line_start = false;
+}
+
+void pp_handle_hash(struct lxl_lexer *self) {
+    struct pp_info *pp_info = self->custom_info;
+    if (pp_info->at_line_start) {
+        pp_info->directive_state = PP_DIRECTIVE_EXPECT;
+        self->next_state = lxl_lstate_Ready;  // Lex directive name.
+    }
+    else {
+        LXL_TODO("Handle # in middle of line.");
+    }
+}
+
+void pp_handle_hash_hash(struct lxl_lexer *self) {
+    (void)self;
+    LXL_TODO("Handle ##");
+}
+
+void pp_handle_directive(struct lxl_lexer *self) {
+    struct pp_info *pp_info = self->custom_info;
+    LXL_ASSERT(pp_info->directive_state == PP_DIRECTIVE_EXPECT);
+    pp_info->directive_state = PP_DIRECTIVE_IN;
+    struct lxl_string_view token_sv = lxl_token_value(self->token);
+    pp_info->last_directive = token_sv;
+    if (lxl_sv_eq_strings(token_sv, "include", "embed")) {
+        pp_info->allow_header_string = true;
+    }
 }
 
 int is_c_digit_dec(int ch) {

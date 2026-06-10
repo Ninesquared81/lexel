@@ -12,10 +12,12 @@
 #define C_TOKENS(X)                                                                             \
     /* Indeintifer and literals. */                                                             \
     X(CTOK_IDENTIFIER)                    /* Identifer: a, hello_there, ... */                  \
+    X(CTOK_PP_DIRECTIVE)                  /* PP directive: include, if, endif, etc */           \
     X(CTOK_LIT_INT)                       /* Integer literal: 42, 0xFF, 0ul, ... */             \
     X(CTOK_LIT_FLOAT)                     /* Floating-point literal: 5.0, 3.14f, ... */         \
     X(CTOK_LIT_CHAR)                      /* Character literal: 'H', 'i', ... */                \
     X(CTOK_LIT_STRING)                    /* String literal: "Hello", "  world \xff", ... */    \
+    X(CTOK_LIT_HEADER_STRING)             /* Header string literal: <stdio.h> */                \
     /* Brackets (equal to their ASCII values). */                                               \
     X(CTOK_BKT_ROUND_LEFT, '(')           /* Left round bracket (parenthesis) */                \
     X(CTOK_BKT_ROUND_RIGHT, ')')          /* Right round bracket (parenthesis) */               \
@@ -130,8 +132,14 @@ enum c_token_kind {
 
 // Preprocessor information.
 struct pp_info {
-    bool in_directive;
-    struct lxl_string_view directive;
+    enum directive_state {
+        PP_DIRECTIVE_OUT,
+        PP_DIRECTIVE_EXPECT,
+        PP_DIRECTIVE_IN,
+    } directive_state;
+    bool at_line_start;
+    bool allow_header_string;
+    struct lxl_string_view last_directive;
 };
 
 // Wrapper struct for a C lexer.
@@ -195,14 +203,21 @@ bool match_float_suffix(struct lxl_lexer *self);
 // Match a punct token completely.
 bool match_punct(struct lxl_lexer *self);
 
+// Match a C string opener -- " or ' or < in #include directive.
+bool match_string_opener(struct lxl_lexer *self);
 // Match a character in a string.
 bool match_string_char(struct lxl_lexer *self);
+// Match a C string closer, to pair with opener -- " for ", ' for ', > for <.
+bool match_string_closer(struct lxl_lexer *self);
 
 int get_word_kind(struct lxl_lexer *self);
 int get_int_kind(struct lxl_lexer *self);
 int get_float_kind(struct lxl_lexer *self);
 int get_punct_kind(struct lxl_lexer *self);
 int get_string_kind(struct lxl_lexer *self);
+
+// Do preprocessor stuff on a whitespace linefeed.
+void on_linefeed_hook_preprocessor(struct lxl_lexer *self);
 
 // Switch to the relevant `.match_int_digit()`.
 void before_integer_hook(struct lxl_lexer *self);
@@ -216,9 +231,24 @@ void before_float_exp_hook(struct lxl_lexer *self);
 // Verify that the lexed float token has a valid suffix.
 void after_float_hook_verify_suffix(struct lxl_lexer *self);
 
+// Do post-token preprocessing stuff.
+void after_token_hook_preprocessor(struct lxl_lexer *self);
+
+// Handle `#` in preprocessor.
+void pp_handle_hash(struct lxl_lexer *self);
+// Handle `##` in preprocessor.
+void pp_handle_hash_hash(struct lxl_lexer *self);
+
 // Like isdigit() but also handles `'`.
 int is_c_digit_dec(int ch);
 // Like isxdigit() but also handles `'`.
 int is_c_digit_hex(int ch);
+
+// Return true if `token_sv` is a preprocessing directive.
+bool is_pp_directive(struct lxl_string_view token_sv);
+
+void pp_handle_hash(struct lxl_lexer *self);
+void pp_handle_hash_hash(struct lxl_lexer *self);
+void pp_handle_directive(struct lxl_lexer *self);
 
 #endif
