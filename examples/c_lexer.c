@@ -6,7 +6,7 @@
 #include <ctype.h>
 
 int main(int argc, char *argv[]) {
-    const char *filename = (argc >= 1) ? argv[1] : __FILE__;
+    const char *filename = (argc > 1) ? argv[1] : __FILE__;
     FILE *fp = fopen(filename, "r");
     if (!fp) return 1;
     struct lxl_string_view src = read_file_logical_lines(fp);
