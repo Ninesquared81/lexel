@@ -1,0 +1,254 @@
+#ifndef LXL_EX_C_LEXER_H
+#define LXL_EX_C_LEXER_H
+
+#include <stdio.h>
+
+#define C_TOKENS_DECLARE(CTOK, ...)             \
+    CTOK __VA_OPT__(= __VA_ARGS__),
+
+#define C_TOKENS_STRING_TABLE(CTOK, ...)        \
+    [CTOK] = LXL_SV_FROM_STRLIT_INIT(#CTOK),
+
+#define C_TOKENS(X)                                                                             \
+    /* Indeintifer and literals. */                                                             \
+    X(CTOK_IDENTIFIER)                    /* Identifer: a, hello_there, ... */                  \
+    X(CTOK_PP_DIRECTIVE)                  /* PP directive: include, if, endif, etc */           \
+    X(CTOK_LIT_INT)                       /* Integer literal: 42, 0xFF, 0ul, ... */             \
+    X(CTOK_LIT_FLOAT)                     /* Floating-point literal: 5.0, 3.14f, ... */         \
+    X(CTOK_LIT_CHAR)                      /* Character literal: 'H', 'i', ... */                \
+    X(CTOK_LIT_STRING)                    /* String literal: "Hello", "  world \xff", ... */    \
+    X(CTOK_LIT_HEADER_STRING)             /* Header string literal: <stdio.h> */                \
+    /* Brackets (equal to their ASCII values). */                                               \
+    X(CTOK_BKT_ROUND_LEFT, '(')           /* Left round bracket (parenthesis) */                \
+    X(CTOK_BKT_ROUND_RIGHT, ')')          /* Right round bracket (parenthesis) */               \
+    X(CTOK_BKT_CURLY_LEFT, '{')           /* Left curly bracket (brace) */                      \
+    X(CTOK_BKT_CURLY_RIGHT, '}')          /* Right curly bracket (brace) */                     \
+    X(CTOK_BKT_SQUARE_LEFT, '[')          /* Left square bracket */                             \
+    X(CTOK_BKT_SQUARE_RIGHT, ']')         /* Right square bracket */                            \
+    /* Single-character operators (equal to their ASCII values). */                             \
+    X(CTOK_BANG, '!')                     /* Logical not */                                     \
+    X(CTOK_HASH, '#')                     /* PP begin directive, PP stringise. */               \
+    X(CTOK_PERCENT, '%')                  /* Remainder */                                       \
+    X(CTOK_AMPERSAND, '&')                /* Address of, bitwise and */                         \
+    X(CTOK_ASTERISK, '*')                 /* Dereference, multiply */                           \
+    X(CTOK_PLUS, '+')                     /* Add */                                             \
+    X(CTOK_COMMA, ',')                    /* Comma operator */                                  \
+    X(CTOK_MINUS, '-')                    /* Subtract */                                        \
+    X(CTOK_DOT, '.')                      /* Member access */                                   \
+    X(CTOK_SLASH, '/')                    /* Divide */                                          \
+    X(CTOK_COLON, ':')                    /* "Else" part of ternary ?:, end of label. */        \
+    X(CTOK_SEMICOLON, ';')                /* Terminate statement */                             \
+    X(CTOK_LT, '<')                       /* Less than */                                       \
+    X(CTOK_EQ, '=')                       /* Assign */                                          \
+    X(CTOK_GT, '>')                       /* Greater than */                                    \
+    X(CTOK_QMARK, '?')                    /* "Then" part of ternary ?: */                       \
+    X(CTOK_BACKSLASH, '\\')               /* Conitnue line */                                   \
+    X(CTOK_CARET, '^')                    /* Bitwise exclusive or */                            \
+    X(CTOK_VBAR, '|')                     /* Bitwise or */                                      \
+    X(CTOK_TILDE, '~')                    /* Bitwise not */                                     \
+    /* Multi-character operators. */                                                            \
+    X(CTOK_BANG_EQ)                       /* !=  Not equal to */                                \
+    X(CTOK_HASH_HASH)                     /* ##  PP concatenate */                              \
+    X(CTOK_PERCENT_EQ)                    /* %=  Assign by remainder */                         \
+    X(CTOK_AMPERSAND_AMPERSAND)           /* &&  Logical and */                                 \
+    X(CTOK_AMPERSAND_EQ)                  /* &=  Assign by bitwise and */                       \
+    X(CTOK_ASTERISK_EQ)                   /* *=  Assign by multiplication */                    \
+    X(CTOK_PLUS_PLUS)                     /* ++  Pre/post increment */                          \
+    X(CTOK_PLUS_EQ)                       /* +=  Assign by addition */                          \
+    X(CTOK_MINUS_MINUS)                   /* --  Pre-post decrement */                          \
+    X(CTOK_MINUS_EQ)                      /* -=  Assign by subtraction */                       \
+    X(CTOK_ARROW)                         /* ->  Member access by pointer */                    \
+    X(CTOK_ELIPSIS)                       /* ... Variadic arguments */                          \
+    X(CTOK_SLASH_EQ)                      /* /=  Assign by division */                          \
+    X(CTOK_LT_LT)                         /* <<  Left bit shift */                              \
+    X(CTOK_LT_LT_EQ)                      /* <<= Assign by left bit shift */                    \
+    X(CTOK_LT_EQ)                         /* <=  Less than or equal to */                       \
+    X(CTOK_EQ_EQ)                         /* ==  Equal to */                                    \
+    X(CTOK_GT_EQ)                         /* >=  Greater than or equal to */                    \
+    X(CTOK_GT_GT)                         /* >>  Rigth bit shift */                             \
+    X(CTOK_GT_GT_EQ)                      /* >>= Assign by right bit shift */                   \
+    X(CTOK_CARET_EQ)                      /* ^=  Assign by bitwise exclusive or */              \
+    X(CTOK_VBAR_EQ)                       /* |=  Assign by bitwise or */                        \
+    X(CTOK_VBAR_VBAR)                     /* ||  Logical or */                                  \
+    /* Keywords. */                                                                             \
+    X(CTOK_KW_ALIGNAS)                    /* alignas, _Alignas */                               \
+    X(CTOK_KW_ALIGNOF)                    /* alignof, _Alignof */                               \
+    X(CTOK_KW_ATOMIC)                     /* _Atomic */                                         \
+    X(CTOK_KW_AUTO)                       /* auto */                                            \
+    X(CTOK_KW_BITINT)                     /* _BitInt */                                         \
+    X(CTOK_KW_BOOL)                       /* _Bool */                                           \
+    X(CTOK_KW_BREAK)                      /* break */                                           \
+    X(CTOK_KW_COMPLEX)                    /* _Complex */                                        \
+    X(CTOK_KW_CASE)                       /* case */                                            \
+    X(CTOK_KW_CHAR)                       /* char */                                            \
+    X(CTOK_KW_CONST)                      /* const */                                           \
+    X(CTOK_KW_CONSTEXPR)                  /* constexpr */                                       \
+    X(CTOK_KW_CONTINUE)                   /* continue */                                        \
+    X(CTOK_KW_DECIMAL128)                 /* _Decimal128 */                                     \
+    X(CTOK_KW_DECIMAL32)                  /* _Decimal32 */                                      \
+    X(CTOK_KW_DECIMAL64)                  /* _Decimal64 */                                      \
+    X(CTOK_KW_DEFAULT)                    /* default */                                         \
+    X(CTOK_KW_DO)                         /* do */                                              \
+    X(CTOK_KW_DOUBLE)                     /* double */                                          \
+    X(CTOK_KW_ELSE)                       /* else */                                            \
+    X(CTOK_KW_ENUM)                       /* enum */                                            \
+    X(CTOK_KW_EXTERN)                     /* extern */                                          \
+    X(CTOK_KW_FALSE)                      /* false */                                           \
+    X(CTOK_KW_FLOAT)                      /* float */                                           \
+    X(CTOK_KW_FOR)                        /* for */                                             \
+    X(CTOK_KW_GENERIC)                    /* _Generic */                                        \
+    X(CTOK_KW_GOTO)                       /* goto */                                            \
+    X(CTOK_KW_IF)                         /* if */                                              \
+    X(CTOK_KW_IMAGINARY)                  /* _Imaginary */                                      \
+    X(CTOK_KW_INLINE)                     /* inline */                                          \
+    X(CTOK_KW_INT)                        /* int */                                             \
+    X(CTOK_KW_LONG)                       /* long */                                            \
+    X(CTOK_KW_NORETURN)                   /* _Noreturn */                                       \
+    X(CTOK_KW_NULLPTR)                    /* nullptr */                                         \
+    X(CTOK_KW_REGISTER)                   /* register */                                        \
+    X(CTOK_KW_RESTRICT)                   /* restrict */                                        \
+    X(CTOK_KW_RETURN)                     /* return */                                          \
+    X(CTOK_KW_SHORT)                      /* short */                                           \
+    X(CTOK_KW_SIGNED)                     /* signed */                                          \
+    X(CTOK_KW_SIZEOF)                     /* sizeof */                                          \
+    X(CTOK_KW_STATIC)                     /* static */                                          \
+    X(CTOK_KW_STATIC_ASSERT)              /* static_assert, _Static_Assert */                   \
+    X(CTOK_KW_STRUCT)                     /* struct */                                          \
+    X(CTOK_KW_SWITCH)                     /* switch */                                          \
+    X(CTOK_KW_THREAD_LOCAL)               /* thread_local, _Thread_Local */                     \
+    X(CTOK_KW_TRUE)                       /* true */                                            \
+    X(CTOK_KW_TYPEDEF)                    /* typedef */                                         \
+    X(CTOK_KW_TYPEOF)                     /* typeof */                                          \
+    X(CTOK_KW_TYPEOF_UNQUAL)              /* typeof_unqual */                                   \
+    X(CTOK_KW_UNION)                      /* union */                                           \
+    X(CTOK_KW_UNSIGNED)                   /* unsigned */                                        \
+    X(CTOK_KW_VOID)                       /* void */                                            \
+    X(CTOK_KW_VOLATILE)                   /* volatile */                                        \
+    X(CTOK_KW_WHILE)                      /* while */                                           \
+
+enum c_token_kind {
+    C_TOKENS(C_TOKENS_DECLARE)
+};
+
+// Preprocessor information.
+struct pp_info {
+    enum directive_state {
+        PP_DIRECTIVE_OUT,
+        PP_DIRECTIVE_EXPECT,
+        PP_DIRECTIVE_IN,
+    } directive_state;
+    bool at_line_start;
+    bool allow_header_string;
+    struct lxl_string_view last_directive;
+};
+
+// Wrapper struct for a C lexer.
+struct c_lexer {
+    struct lxl_lexer base;
+    struct pp_info pp_info;
+};
+
+// Read a C file into a string view, including splicing lines ending with `\`.
+// Return an empty view on failure.
+struct lxl_string_view read_file_logical_lines(FILE *fp);
+
+// Grow a buffer of the given (current) size, and return a copy of the newly allocated buffer.
+// Free *buf on failure and return NULL.
+void *grow_buffer(char **buf, size_t *size);
+
+// Create a lexer capable of lexing C code.
+void init_c_lexer(struct c_lexer *lexer, struct lxl_string_view src);
+
+// Return a string view of the name for the given C token kind.
+struct lxl_string_view c_token_kind_name(int kind);
+
+// Escape a character.
+const char *escape_char(char ch);
+
+// Show a token.
+void show_token(struct lxl_token token);
+
+// Match a C line comment opener -- //.
+bool match_comment_line_opener(struct lxl_lexer *self);
+// Match a C block comment opener -- /*.
+bool match_comment_block_opener(struct lxl_lexer *self);
+// Match a C block comment closer: -- */.
+bool match_comment_block_closer(struct lxl_lexer *self);
+
+// Match a nestable block comment opener -- /+.
+bool match_comment_block_nest_opener(struct lxl_lexer *self);
+// Match a nestable block comment closer -- +/.
+bool match_comment_block_nest_closer(struct lxl_lexer *self);
+
+// Match an initial word-constituent character for C tokens -- [A-Za-z_].
+bool match_word_init_char(struct lxl_lexer *self);
+
+// Match a word-constituent character for C tokens -- for identifiers and keywords: [A-Za-z0-9_].
+bool match_word_char(struct lxl_lexer *self);
+
+// Match an integer literal prefix -- (digit) != 0: decimal, 0: octal, 0x/0X: hexadecimal, 0b/0B: binary.
+bool match_int_prefix(struct lxl_lexer *self);
+// Match a decimal digit -- [0-9'].
+bool match_digit_dec(struct lxl_lexer *self);
+// Match a hexadecimal digit -- [0-9'].
+bool match_digit_hex(struct lxl_lexer *self);
+// Match an integer literal suffix -- u/U and either l/L or ll/LL in any order..
+bool match_int_suffix(struct lxl_lexer *self);
+
+// Match a floating-point literal prefix -- 0x: hexadecimal, (digit): decimal.
+bool match_float_prefix(struct lxl_lexer *self);
+// Match a floating-point literal suffix -- f/F or l/L.
+bool match_float_suffix(struct lxl_lexer *self);
+
+// Match a punct token completely.
+bool match_punct(struct lxl_lexer *self);
+
+// Match a C string opener -- " or ' or < in #include directive.
+bool match_string_opener(struct lxl_lexer *self);
+// Match a character in a string.
+bool match_string_char(struct lxl_lexer *self);
+// Match a C string closer, to pair with opener -- " for ", ' for ', > for <.
+bool match_string_closer(struct lxl_lexer *self);
+
+int get_word_kind(struct lxl_lexer *self);
+int get_int_kind(struct lxl_lexer *self);
+int get_float_kind(struct lxl_lexer *self);
+int get_punct_kind(struct lxl_lexer *self);
+int get_string_kind(struct lxl_lexer *self);
+
+// Do preprocessor stuff on a whitespace linefeed.
+void on_linefeed_hook_preprocessor(struct lxl_lexer *self);
+
+// Switch to the relevant `.match_int_digit()`.
+void before_integer_hook(struct lxl_lexer *self);
+// Verify that the lexed integer token has a valid suffix.
+void after_integer_hook_verify_suffix(struct lxl_lexer *self);
+
+// Switch to the relevant `.match_float_digit()`.
+void before_float_frac_hook(struct lxl_lexer *self);
+// Ensure `.match_float_digit()` is reset to the decimal-only version.
+void before_float_exp_hook(struct lxl_lexer *self);
+// Verify that the lexed float token has a valid suffix.
+void after_float_hook_verify_suffix(struct lxl_lexer *self);
+
+// Do post-token preprocessing stuff.
+void after_token_hook_preprocessor(struct lxl_lexer *self);
+
+// Handle `#` in preprocessor.
+void pp_handle_hash(struct lxl_lexer *self);
+// Handle `##` in preprocessor.
+void pp_handle_hash_hash(struct lxl_lexer *self);
+
+// Like isdigit() but also handles `'`.
+int is_c_digit_dec(int ch);
+// Like isxdigit() but also handles `'`.
+int is_c_digit_hex(int ch);
+
+// Return true if `token_sv` is a preprocessing directive.
+bool is_pp_directive(struct lxl_string_view token_sv);
+
+void pp_handle_hash(struct lxl_lexer *self);
+void pp_handle_hash_hash(struct lxl_lexer *self);
+void pp_handle_directive(struct lxl_lexer *self);
+
+#endif

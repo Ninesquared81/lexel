@@ -1,193 +1,248 @@
 # lexel
-Lexel is a C library for lexing the source code of a (textual) computer languge, as well as an interface
-to automatically generate a lexer based on lexing rules. Note that lexel is entirely C-based;
-there's no mini-language to learn on top of the interface. Instead, lexers are generated entirely
-programmatically through calls to lexel functions.
 
-## Getting Started
+Lexel is a simple lexing library written in C.
 
-Lexel is a header-only library. You should `#define LEXEL_IMPLEMENTATION` in exactly ONE place where
-you include the header file, directly before the `#include` directive.
+It is designed to be widely applicable and easily extensible.
 
-The repo also includes the file example.c, which demonstrates the usage of the library.
+I am currently rewriting it from the ground up, so please bear with me.
 
-The library is currently in its very early days so many features are missing.
+## Quick Start
 
-### (Not) Building
+Lexel comes as a pair of .c and .h files. Only lexel.c and lexel.h are needed to use the library,
+although tests and examples are also available if you download the entire repo.
 
-As alluded to above, there is no build step for lexel. However, the script build.bat is included
-in the repo to automate building example.c. Note that this build script invokes gcc to build the
-program. If you have a different C compiler, feel free to edit the file.
+Currently, there are no releases, so to install, either download the raw [lexel.c](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.c) and [lexel.h](https://raw.githubusercontent.com/Ninesquared81/lexel/refs/heads/overhaul/lexel.h) files, or clone the entire repo.
 
-## External and internal interfaces
+## (Not) Building
 
-Lexel does not hide any details from the caller, but it separates the lexer API into two interfaces.
-The external interface is for working with a lexer, whereas the internal interface is for writing a lexer.
+Lexel is a simple library and thus does not have any complicated build process.
+Just build lexel.c as part of your project. Lexel is designed to allow it to be
+built as part of a unity build, so you can even just `#include "lexel.c"` in the
+relevant file in your project.
 
-## Other interfaces
+Of course, lexel _can_ be built as a traditional static/dynamic library and subsequently
+linked to, if you so desire.
 
-Lexel also has a string view interface. A string view is an read-only view of a string with a pointer to
-the start and a length. Lexel itself usually uses `start` and `end` pointers internally, but provides the
-string view interface due to its utility outside of lexel. There are convenience functions for converting
-between string views and `start`/`end` pointers.
+## Library Overview
 
-## Lexing with lexel
+Lexel is a library for creating lexers. Lexel does not "generate" lexer code for you, but
+instead runs a state machine which despatches to user-provided functions to recognise and
+lex tokens. It is designed to have a simple core which is easily extended, allowing for
+much flexibility in usage.
 
-To start using `lexel`, we must first create a lexer object. This can be done through the `lxl_lexer_new()`
-function, which takes two pointer arguments: one is a pointer to the start of the source text, while the
-other is a pointer to one past the end of the string. Alternatively, we can use `lxl_lexer_from_sv()` to
-create the lexer from a string view instead.
+### The lexer
 
-As an example, let us take the string `"1 2 +"`, which we want to lex. We can create the lexer like so:
+At the heart of lexel is the lexer object.
 
-    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("1 2 +"));
+```c
+struct lxl_lexer {
+    // Lexer state.
+    struct lxl_utf8_stream stream;
+    struct lxl_token token;
+    const char *line_start;
+    enum lxl_lex_error error;
+    int line;
+    union {
+        struct lxl_string_view last_string_opener;
+        struct lxl_string_view last_block_comment_opener;
+    };
+    int block_comment_level;
+    void (*next_state)(struct lxl_lexer *self);
 
-The macro `LXL_SV_FROM_STRLIT()` creates a string view object from a C string literal. It uses `sizeof` to
-calculate the length, so should only be used with an actual string literal.
+    // Query functions.
+    bool (*match_whitespace_char)(struct lxl_lexer *self);
+    bool (*match_comment_line_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_closer)(struct lxl_lexer *self);
+    bool (*match_comment_block_nest_opener)(struct lxl_lexer *self);
+    bool (*match_comment_block_nest_closer)(struct lxl_lexer *self);
+    bool (*match_word_init_char)(struct lxl_lexer *self);
+    bool (*match_word_char)(struct lxl_lexer *self);
+    bool (*match_int_prefix)(struct lxl_lexer *self);
+    bool (*match_int_digit)(struct lxl_lexer *self);
+    bool (*match_int_suffix)(struct lxl_lexer *self);
+    bool (*match_float_prefix)(struct lxl_lexer *self);
+    bool (*match_float_digit)(struct lxl_lexer *self);
+    bool (*match_float_radix_sep)(struct lxl_lexer *self);
+    bool (*match_float_exp_sep)(struct lxl_lexer *self);
+    bool (*match_float_exp_sign)(struct lxl_lexer *self);
+    bool (*match_float_suffix)(struct lxl_lexer *self);
+    bool (*match_punct)(struct lxl_lexer *self);
+    bool (*match_string_opener)(struct lxl_lexer *self);
+    bool (*match_string_closer)(struct lxl_lexer *self);
+    bool (*match_string_char)(struct lxl_lexer *self);
 
-We can now try out the lexer by calling the `lxl_lexer_next_token()` function:
+    // Token kind functions.
+    int (*get_word_kind)(struct lxl_lexer *self);
+    int (*get_int_kind)(struct lxl_lexer *self);
+    int (*get_float_kind)(struct lxl_lexer *self);
+    int (*get_punct_kind)(struct lxl_lexer *self);
+    int (*get_string_kind)(struct lxl_lexer *self);
 
-    struct lxl_token token = lxl_lexer_next_token(&lexer);
-    struct lxl_string_view value = lxl_token_value(token);
-    printf("Token: '"LXL_SV_FMT_SPEC"' [type = %d]\n", LXL_SV_FMT_ARG(value), token.token_type);
+    // Hook functions (called at specific times).
+    void (*before_token_hook)(struct lxl_lexer *self);
+    void (*on_linefeed_hook)(struct lxl_lexer *self);
+    void (*after_whitespace_hook)(struct lxl_lexer *self);
+    void (*before_word_hook)(struct lxl_lexer *self);
+    void (*after_word_hook)(struct lxl_lexer *self);
+    void (*before_integer_hook)(struct lxl_lexer *self);
+    void (*after_integer_hook)(struct lxl_lexer *self);
+    void (*before_float_hook)(struct lxl_lexer *self);
+    void (*before_float_frac_hook)(struct lxl_lexer *self);
+    void (*before_float_exp_hook)(struct lxl_lexer *self);
+    void (*after_float_hook)(struct lxl_lexer *self);
+    void (*after_punct_hook)(struct lxl_lexer *self);
+    void (*before_string_hook)(struct lxl_lexer *self);
+    void (*after_string_hook)(struct lxl_lexer *self);
+    void (*on_error_hook)(struct lxl_lexer *self);
+    void (*before_error_token_hook)(struct lxl_lexer *self);
+    void (*after_token_hook)(struct lxl_lexer *self);
 
-We have used a couple of helper functions and macros here. Firstly, `lxl_token_value()` extracts the value
-of a token as a string view, while the macros `LXL_SV_FMT_SPEC` and `LXL_SV_FMT_ARG()` allow us to print
-string views in `printf()` and similar functions. The `LXL_SV_FMT_ARG()` macro evaluates its argument
-multiple times, so be wary when using it with a complicated argument expression.
+    // Extensions (not used by lexel directly).
+    void *custom_info;
+};
 
-Running this code, we should get the output
+```
 
-    Token: '1' [type = -2]
+This might look complicated, but it's quite simple, really.
 
-What's going on here, then?
+#### Lexer state
 
-By default, the lexer emits tokens of the type `LXL_TOKEN_UNINIT` (value -2), with the rule that tokens
-comprise symbolic (non-whitespace) characters with whitespace characters as token separators.
-This may be good enough for the most basic of use cases, but lexel is capable of so much more. Lexel makes
-very few assumptions about how things should be lexed, however, so we need to do a bit of work to customise
-it to our liking. Firstly, let's handle comments.
+The first group of fields are how the lexer keeps track of its position in the source
+code, including enough information to reconstruct an exact line and column reference
+for each token. The last of these fields, `.next_state`, is a pointer to a state function,
+which is the main machinery of the lexer. The lexer uses this field in its main event loop
+to determine which state to enter next, until it reaches the `Return` state, which signifies
+that the lexer should return the token it has constructed to the caller. Each state function
+sets the `.next_state` field before returning. The lexer comes with standard states which
+are used for lexing. Additional user-defined states may be provided, but [hook functions](#hook-functions)
+must be used to splice them into the state control flow.
 
-Comments in lexel are treated like whitespace. They can be used to separate tokens and do not themselves
-constitute a token. Lexel supports three types of comment. Line comments can start anywhere on a line and run
-to the end of the line. For example, `# Python comments` are of this type.
-Unnestable block comments are enclosed within a pair of symbols, and, as the name suggests, cannot be nested
-within themselves. For example, `/* C comments */` are of this type.
-Nestable block comments are, as before, enclosed within a pair of symbols, but, unlike before,
-these comments _can_ be nested. For example, `/+ D comments +/` are of this type.
+#### Query functions
 
-Lexel allows arbitrarily many styles for each type of comment. By default, there are _no_ comments of any type
-(lexel does not like to make assumptions), but we can change that by setting the appropriate fields within the
-`lexer` structure.
+The next group of fields are called the "query functions". These user-provided functions are
+used to determine how to lex certain tokens. All query functions have default behaviours
+which may or may not be good enough for a user's needs. Note that the default behaviour for
+`.match_word_char()` overshadows later query functions, matchin any non-whitespace tokens.
 
-For line comments, we have the field `.line_comment_openers`, which holds a NULL-terminated array
-(via pointer) of strings each holding the opening symbol for a particular style of line comment.
-For block comments, we have the fields `.nestable_comment_delims` and `.unnestable_comment_delims` for
-nestable and unnestable block comments, respectively. These fields each hold a NULL-terminated array
-(via pointer) of `delim_pair` structures, which is a pair of strings for the opening and closing delimeter
-for a particular block comment style. To remove ambiguity, it is important that nestable and unnestable block
-comments do not share the same openers or closers.
+#### Hook functions
 
-Each of these three fields may be left as `NULL` if there are to be no comments of that type.
+Next come the hook functions. These are the main source of customisation for lexel. Hook
+functions are simply functions which are called at certain well-defined points in the
+execution of the lexer. They take a pointer to the lexer (which they may modify) and
+return `void`. All hook functions are optional. The names of hook functions are of the
+form **before**/**on**/**after** _event_ **hook**.
 
-Going back to our example, let's add Python-like line comments starting with `#`. We can simply add the
-following line just after we create the lexer:
+Unlike query functions, hook functions exist soley to allow the user to interact with the
+lexer. They do not send any data back to the lexer in and of themselves. See the [C lexer
+example](examples/c_lexer.c) for a demonstration of hook functions in action.
 
-    lexer.line_comment_openers = (const char *[]){"#", NULL};
+#### Extensions
 
-If you are unfamiliar with C99's compound literals, we are essentially creating an array of strings on the
-fly and using it to set the `.line_comment_openers` field. As described above, we need to make sure this
-array is NULL-terminated.
+Finally, the last field in the lexer is `.custom_info`. This is a generic pointer not
+used by the default lexer at all. It is provided in case a user requires additional
+context when extending the lexer. Its meaning is left completely up to he user and
+can be safely ignored if not required.
 
-We should also update the source code to use one of these comments:
+### Built-in lexer extensions
 
-    struct lxl_lexer lexer = lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("#1 2 +\n3");
+Lexel comes with a few handy built-in extensions covering some of the most common cases,
+allowing users to use the built-in version rather than implementing them.
 
-Now when we run the code, we get
+### Tokens
 
-    Token: '3' [type = -2]
+The lexer spits out tokens via calls to `lxl_lexer_next_token()`. Lexel's tokens store
+pointers to the start and end of the token's contents, the token's source location
+(line and column number), and an integer storing the token's kind.
 
-The entire first line (`1 2 +`) is skipped since it is in a comment.
+```c
+struct lxl_token {
+    const char *start;
+    const char *end;
+    struct lxl_location loc;
+    int kind;
+};
+```
 
-We could also add C-style `/* unnestable */` comments.
+The user is free to prescribe meanings to kind values of zero or greater, however,
+negative kind values are reserved for use by lexel and can have special meanings.
 
-    lexer.unnestable_comment_delims = (struct delim_pair[]){{"/*", "*/"}, {0}};
+For example, a kind of `-1` is used for the sentinel "end of tokens" token, while
+a kind of `-2` represents an uninitalised token. If the user does not specify a
+type for a token, it will have a value of `-2` (apart from the aforementioned
+"end of tokens" token). A value of `-16` or less represents a lexing error, with
+specific values for each error, listed below:
 
-Here, we use `{0}` to NULL-terminate the array.
+```c
+enum lxl_lex_error {
+    LXL_LERR_OK = 0,
+    LXL_LERR_GENERIC = -16,
+    LXL_LERR_EOF = -17,
+    LXL_LERR_UNCLOSED_BLOCK_COMMENT = -18,
+    LXL_LERR_UNCLOSED_STRING = -19,
+    LXL_LERR_INVALID_INTEGER = -20,
+    LXL_LERR_INVALID_FLOAT = -21,
+    LXL_LERR_UNICODE = -22,
+    LXL_LERR_UNRECOGNISED_TOKEN = -23,
+    LXL_LERR_INVALID_STRING_CHARACTER = -24,
+};
+```
 
-Let's change the source code again:
+A [string view](#string-view-interface) of a token's value can be obtained via the
+`lxl_token_value()` function. Note that during lexing, the `.end` field of the token
+will likely not be set yet (or rather, it will be set to the token's `.start`). When
+in the lexer, the function `lxl_lexer__peek_token()` should be used to obtain a
+string view of the current token as it stands up to the current position of the lexer.
 
-    struct lxl_lexer lexer - lxl_lexer_from_sv(LXL_SV_FROM_STRLIT("/*1 /*2*/ +\n3");
+### String view interface
 
-Now, we get
+Lexel comes with its own string view interface, which is used internally by the library
+to store strings. A string view is a read-only pointer to string data along with a
+byte length. Below is lexel's definition of a string view:
 
-    Token: '+' [type = -2]
+```c
+struct lxl_string_view {
+    const char *start;
+    ptrdiff_t length;
+};
+```
 
-Notice how the comment is terminated after the 2, even though we have another opener inside the comment.
-This is because we used an unnestable comment. What if we changed `/* */` to be nestable instead?
+You will notice that the length field is signed. This is an intentional design choice
+for lexel since signed types generally behave more intuitively, even when they are
+representing something which cannot be negative.
 
-    lexer.nestable_comment_delims = (struct delim_pair[]){{"/*", "*/"}, {0}};
+### UTF-8 stream interface
 
-Using the same source code, we now get
+Lexel also comes with an interface for working with UTF-8 data, which is used by the
+lexer. UTF-8 is the _only_ supported string encoding in lexel (apart from ASCII,
+which is a subset of UTF-8). To use data with a different encoding, it must first be
+re-encoded into UTF-8 before being fed into lexel.
 
-    Token: '' [type = -18]
+The stream decodes the UTF-8 data codepoint-by-codepoint, via calls to
+`lxl_utf8_stream_advance()`. The stream can also be rewound one codepoint
+at a time via `lxl_utf8_stream_rewind()`. Both of these take a pointer to
+a UTF-8 stream object, which is defined below:
 
-Huh? What's going on here? We seem to have an empty token with the type -18. We've only encountered -2 as
-a token type so far. This must have some special meaning.
+```c
+struct lxl_utf8_stream {
+    struct lxl_string_view buffer;
+    ptrdiff_t cursor;
+    enum lxl_unicode_error error;
+};
+```
 
-What we have here is an error token. Error tokens are emitted whenever the lexer encounters an error during
-lexing. They're easy to recognise as they token type will always be -16 or lower. The type maps to an error
-code defined in the `lxl_lex_error` enum. We could look at this enum to see the mnemonic for the error code,
-but we also have the function `lxl_error_message()` available, which gives us a human-readable string
-describing the error.
+The last field is the latest Unicode decoding error, which is cleared/set when the stream
+is advanced or rewinded. The error can be one of:
 
-    printf("Error: %s.\n", lxl_error_message(token,token_type));
-
-Now we see
-
-    Error: Unclosed block comment.
-
-This makes sense, since with a nestable comment, each `/*` must have a corresponding `*/`. In our example, we
-have two `/*` but only one `*/`, so the lexer scans until the end of its input to find the second `*/`.
-Since it finds none, it reports an error.
-
-If we were to call `lxl_lexer_next_token()` again and then print the token as before, we'd get
-
-    Token: '' [type = -1]
-
-A token of type -1 (`LXL_TOKENS_END`) is a special token marking the end of the token stream. If we keep
-calling `lxl_lexer_next_token()` now, we will keep receiving an `LXL_TOKENS_END` token.
-
-If ever we need to re-lex the source code, we can reset the lexer to the beginning using `lxl_lexer_reset()`.
-We can also rewind the lexer by 1 or more characters using `lxl_lexer__rewind()`/`lxl_lexer__rewind_by()`,
-but these are part of the internal interface and since they work on the character level, could set the lexer
-to be in the middle of a token instead of at the start/end of a token, leading to possibly confusing results.
-It's best to use the external interface when calling `lxl_next_token()` and only poke around in the lexer
-internals when absolutely necessary.
-
-Let's consolidate all we've done so far and put the lexing into a loop so we can lex the whole input.
-
-    struct lxl_lexer lexer = lxl_lexer_from_sv(SV_FROMT_STRLIT("/*1*/ 2 #+\n3 /* unclosed");
-    lexer.line_comment_openers = (const char *[]){"#", NULL};
-    lexer.nestable_comment_delims = (struct delim_pair[]){{"/*", "*/"}, {0}};
-    struct lxl_token token = {0};
-    while (!LXL_TOKEN_IS_END(token = lxl_lexer_next_token(&lexer))) {
-        struct string_view = lxl_token_value(token);
-        printf("Token: '"LXL_SV_FMT_SPEC" [type = %d]\n", LXL_SV_FMT_ARG(value), token.token_type);
-        if (LXL_TOKEN_IS_ERROR(token)) {
-            printf("Error: %s.\n", lxl_error_message(token.token_type));
-        }
-    }
-
-This has the output
-
-    Token: '2' [type = -2]
-    Token: '3' [type = -2]
-    Token: '' [type = -18]
-    Error: Unclosed block comment.
-
-## Naming conventions
-
-All lexel identifiers start with the `lxl_` prefix
-(macros/enum constants are in capitals, functions are lowercase). Any identifier starting with such a
-prefix (case-insensitive) is reserved by lexel so should not be used by callers.
+```c
+enum lxl_unicode_error {
+    LXL_UNIERR_OK = 0,
+    LXL_UNIERR_UNEXPECTED_EOF,
+    LXL_UNIERR_INVALID_FIRST_BYTE,
+    LXL_UNIERR_INVALID_CONT_BYTE,
+    LXL_UNIERR_UNEXPECTED_CONT_BYTE,
+    LXL_UNIERR_MISSING_CONT_BYTE,
+    LXL_UNIERR_OUT_OF_RANGE,
+    LXL_UNIERR_OVERLONG_ENCODING,
+};
+```
